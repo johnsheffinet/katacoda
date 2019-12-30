@@ -1,0 +1,48 @@
+
+# Deploy Containers Using Kubectl
+
+# Step 1 - Launch Cluster
+minikube start
+
+kubectl get nodes
+
+# Step 2 - Kubectl Run
+kubectl run http \
+--image=katacoda/docker-http-server:latest \
+--replicas=1
+
+kubectl get deployments
+
+kubectl describe deployment http
+
+# Step 3 - Kubectl Expose
+kubectl expose deployment http \
+--external-ip="172.17.0.63" \
+--port=8000 \
+--target-port=80
+
+curl http://172.17.0.63:8000
+
+# Step 4 - Kubectl Run and Expose
+kubectl run httpexposed \
+--image=katacoda/docker-http-server:latest \
+--replicas=1 \
+--port=80 \
+--hostport=8001
+
+curl http://172.17.0.63:8001
+
+kubectl get services #No
+
+docker ps | grep httpexposed #Yes
+
+# Step 5 - Scale Containers
+kubectl scale deployment http \
+--replicas=3
+
+kubectl get pods
+
+kubectl describe services http
+
+curl http://172.17.0.63:8000
+
