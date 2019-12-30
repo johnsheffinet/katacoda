@@ -13,10 +13,10 @@ kubectl run http \
 
 kubectl get deployments
 
-kubectl describe deployment http
+kubectl describe deployments http
 
 # Step 3 - Kubectl Expose
-kubectl expose deployment http \
+kubectl expose deployments http \
 --external-ip="172.17.0.63" \
 --port=8000 \
 --target-port=80
@@ -45,4 +45,3 @@ kubectl get pods
 kubectl describe services http
 
 curl http://172.17.0.63:8000
-
