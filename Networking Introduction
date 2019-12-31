@@ -1,31 +1,204 @@
 # Networking Introduction
 
 # Step 1 - Cluster IP
-Services are deployed via kubectl apply -f clusterip.yaml.
+cat << EOF >> clusterip.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp1-clusterip-svc
+  labels:
+    app: webapp1-clusterip
+spec:
+  ports:
+  - port: 80
+  selector:
+    app: webapp1-clusterip
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: webapp1-clusterip-deployment
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: webapp1-clusterip
+    spec:
+      containers:
+      - name: webapp1-clusterip-pod
+        image: katacoda/docker-http-server:latest
+        ports:
+        - containerPort: 80
+EOF
 
-The definition can be viewed at cat clusterip.yaml
+kubectl apply -f clusterip.yaml
 
-This will deploy a web app with two replicas to showcase load balancing along with a service. The Pods can be viewed at kubectl get pods
+kubectl get pods
 
-It will also deploy a service. kubectl get svc
+kubectl get services
 
-More details on the service configuration and active endpoints (Pods) can be viewed via kubectl describe svc/webapp1-clusterip-svc
-
-After deploying, the service can be accessed via the ClusterIP allocated.
+kubectl describe services/webapp1-clusterip-svc
 
 export CLUSTER_IP=$(kubectl get services/webapp1-clusterip-svc -o go-template='{{(index .spec.clusterIP)}}')
+
 echo CLUSTER_IP=$CLUSTER_IP
-curl $CLUSTER_IP:80
-
-Multiple requests will showcase how the service load balancers across multiple Pods based on the common label selector.
 
 curl $CLUSTER_IP:80
-
 
 # Step 2 - Target Port
+cat << EOF >> clusterip-target.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp1-clusterip-targetport-svc
+  labels:
+    app: webapp1-clusterip-targetport
+spec:
+  ports:
+  - port: 8080
+    targetPort: 80
+  selector:
+    app: webapp1-clusterip-targetport
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: webapp1-clusterip-targetport-deployment
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: webapp1-clusterip-targetport
+    spec:
+      containers:
+      - name: webapp1-clusterip-targetport-pod
+        image: katacoda/docker-http-server:latest
+        ports:
+        - containerPort: 80
+EOF
+
+kubectl apply -f clusterip-target.yaml
+
+kubectl get services
+
+kubectl describe services/webapp1-clusterip-targetport-svc
+
+export CLUSTER_IP=$(kubectl get services/webapp1-clusterip-targetport-svc -o go-template='{{(index .spec.clusterIP)}}')
+
+echo CLUSTER_IP=$CLUSTER_IP
+
+curl $CLUSTER_IP:8080
 
 # Step 3 - NodePort
+cat << EOF >> nodeport.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp1-nodeport-svc
+  labels:
+    app: webapp1-nodeport
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    nodePort: 30080
+  selector:
+    app: webapp1-nodeport
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: webapp1-nodeport-deployment
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: webapp1-nodeport
+    spec:
+      containers:
+      - name: webapp1-nodeport-pod
+        image: katacoda/docker-http-server:latest
+        ports:
+        - containerPort: 80
+EOF
+
+kubectl apply -f nodeport.yaml
+
+kubectl get services
+
+kubectl describe services/webapp1-nodeport-svc
+
+curl 172.17.0.37:30080
 
 # Step 4 - External IPs
+Update the definition to the current cluster's IP address with sed -i 's/HOSTIP/172.17.0.37/g' externalip.yaml
+
+cat << EOF >> externalip.yaml
+piVersion: v1
+kind: Service
+metadata:
+  name: webapp1-externalip-svc
+  labels:
+    app: webapp1-externalip
+spec:
+  ports:
+  - port: 80
+  externalIPs:
+  - HOSTIP
+  selector:
+    app: webapp1-externalip
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: webapp1-externalip-deployment
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: webapp1-externalip
+    spec:
+      containers:
+      - name: webapp1-externalip-pod
+        image: katacoda/docker-http-server:latest
+        ports:
+        - containerPort: 80
+EOF
+
+kubectl apply -f externalip.yaml
+
+kubectl get services
+
+kubectl describe services/webapp1-externalip-svc
+
+curl 172.17.0.37
 
 # Step 5 - Load Balancer
+
+cat loadbalancer.yaml
+
+kubectl apply -f cloudprovider.yaml
+
+When a service requests a Load Balancer, the provider will allocate one from the 10.10.0.0/26 range defined in the configuration.
+
+kubectl get pods -n kube-system
+
+kubectl apply -f loadbalancer.yaml
+
+While the IP address is being defined, the service will show Pending. When allocated, it will appear in the service list.
+
+kubectl get svc
+
+kubectl describe svc/webapp1-loadbalancer-svc
+
+The service can now be accessed via the IP address assigned, in this case from the 10.10.0.0/26 range.
+
+export LoadBalancerIP=$(kubectl get services/webapp1-loadbalancer-svc -o go-template='{{(index .status.loadBalancer.ingress 0).ip}}')
+echo LoadBalancerIP=$LoadBalancerIP
+curl $LoadBalancerIP
+
+curl $LoadBalancerIP
