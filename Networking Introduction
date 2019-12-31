@@ -34,13 +34,13 @@ EOF
 
 kubectl apply -f clusterip.yaml
 
-kubectl get pods
+kubectl get po
 
-kubectl get services
+kubectl get svc
 
-kubectl describe services/webapp1-clusterip-svc
+kubectl describe svc/webapp1-clusterip-svc
 
-export CLUSTER_IP=$(kubectl get services/webapp1-clusterip-svc -o go-template='{{(index .spec.clusterIP)}}')
+export CLUSTER_IP=$(kubectl get svc/webapp1-clusterip-svc -o go-template='{{(index .spec.clusterIP)}}')
 
 echo CLUSTER_IP=$CLUSTER_IP
 
@@ -81,11 +81,13 @@ EOF
 
 kubectl apply -f clusterip-target.yaml
 
-kubectl get services
+kubectl get po
 
-kubectl describe services/webapp1-clusterip-targetport-svc
+kubectl get svc
 
-export CLUSTER_IP=$(kubectl get services/webapp1-clusterip-targetport-svc -o go-template='{{(index .spec.clusterIP)}}')
+kubectl describe svc/webapp1-clusterip-targetport-svc
+
+export CLUSTER_IP=$(kubectl get svc/webapp1-clusterip-targetport-svc -o go-template='{{(index .spec.clusterIP)}}')
 
 echo CLUSTER_IP=$CLUSTER_IP
 
@@ -127,17 +129,17 @@ EOF
 
 kubectl apply -f nodeport.yaml
 
-kubectl get services
+kubectl get po
 
-kubectl describe services/webapp1-nodeport-svc
+kubectl get svc
+
+kubectl describe svc/webapp1-nodeport-svc
 
 curl 172.17.0.37:30080
 
 # Step 4 - External IPs
-Update the definition to the current cluster's IP address with sed -i 's/HOSTIP/172.17.0.37/g' externalip.yaml
-
 cat << EOF >> externalip.yaml
-piVersion: v1
+apiVersion: v1
 kind: Service
 metadata:
   name: webapp1-externalip-svc
@@ -147,7 +149,7 @@ spec:
   ports:
   - port: 80
   externalIPs:
-  - HOSTIP
+  - 172.17.0.37
   selector:
     app: webapp1-externalip
 ---
@@ -171,34 +173,61 @@ EOF
 
 kubectl apply -f externalip.yaml
 
-kubectl get services
+kubectl get po
 
-kubectl describe services/webapp1-externalip-svc
+kubectl get svc
+
+kubectl describe svc/webapp1-externalip-svc
 
 curl 172.17.0.37
 
 # Step 5 - Load Balancer
-
-cat loadbalancer.yaml
+cat << EOF >> loadbalancer.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp1-loadbalancer-svc
+  labels:
+    app: webapp1-loadbalancer
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+  selector:
+    app: webapp1-loadbalancer
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: webapp1-loadbalancer-deployment
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: webapp1-loadbalancer
+    spec:
+      containers:
+      - name: webapp1-loadbalancer-pod
+        image: katacoda/docker-http-server:latest
+        ports:
+        - containerPort: 80
+EOF
 
 kubectl apply -f cloudprovider.yaml
 
-When a service requests a Load Balancer, the provider will allocate one from the 10.10.0.0/26 range defined in the configuration.
-
-kubectl get pods -n kube-system
+kubectl get po -n kube-system
 
 kubectl apply -f loadbalancer.yaml
 
-While the IP address is being defined, the service will show Pending. When allocated, it will appear in the service list.
+kubectl get po
 
 kubectl get svc
 
 kubectl describe svc/webapp1-loadbalancer-svc
 
-The service can now be accessed via the IP address assigned, in this case from the 10.10.0.0/26 range.
+export LoadBalancerIP=$(kubectl get svc/webapp1-loadbalancer-svc -o go-template='{{(index .status.loadBalancer.ingress 0).ip}}')
 
-export LoadBalancerIP=$(kubectl get services/webapp1-loadbalancer-svc -o go-template='{{(index .status.loadBalancer.ingress 0).ip}}')
 echo LoadBalancerIP=$LoadBalancerIP
-curl $LoadBalancerIP
 
 curl $LoadBalancerIP
