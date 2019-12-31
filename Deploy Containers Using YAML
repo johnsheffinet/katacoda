@@ -1,7 +1,7 @@
 # Deploy Containers Using YAML
 
 # Step 1 - Create Deployment
-# nano deployment.yaml
+cat << EOF >> deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -21,15 +21,16 @@ spec:
         image: katacoda/docker-http-server:latest
         ports:
         - containerPort: 80
+EOF
 
 kubectl create -f deployment.yaml
 
-kubectl get deployments
+kubectl get deploy
 
-kubectl describe deployments webapp1
+kubectl describe deploy webapp1
 
 # Step 2 - Create Service
-# nano service.yaml
+cat << EOF >> service.yaml
 apiVersion: v1
 kind: Service
 metadata:
@@ -43,20 +44,21 @@ spec:
     nodePort: 30080
   selector:
     app: webapp1
+EOF
 
 kubectl create -f service.yaml
 
-kubectl get services
+kubectl get svc
 
-kubectl describe services webapp1-svc
+kubectl describe svc webapp1-svc
 
 curl host01:30080
 
 # Step 3 - Scale Deployment
 kubectl apply -f deployment.yaml
 
-kubectl get deployments
+kubectl get deploy
 
-kubectl get pods
+kubectl get po
 
 curl host01:30080
