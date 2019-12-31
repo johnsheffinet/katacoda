@@ -3,16 +3,16 @@
 # Step 1 - Launch Cluster
 minikube start
 
-kubectl get nodes
+kubectl get no
 
 # Step 2 - Kubectl Run
 kubectl run http \
 --image=katacoda/docker-http-server:latest \
 --replicas=1
 
-kubectl get deployments
+kubectl get deploy
 
-kubectl describe deployments http
+kubectl describe deploy http
 
 # Step 3 - Kubectl Expose
 kubectl expose deployments http \
@@ -31,7 +31,7 @@ kubectl run httpexposed \
 
 curl http://172.17.0.63:8001
 
-kubectl get services #No
+kubectl get svc #No
 
 docker ps | grep httpexposed #Yes
 
@@ -39,8 +39,8 @@ docker ps | grep httpexposed #Yes
 kubectl scale deployment http \
 --replicas=3
 
-kubectl get pods
+kubectl get po
 
-kubectl describe services http
+kubectl describe svc http
 
 curl http://172.17.0.63:8000
