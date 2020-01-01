@@ -3,7 +3,15 @@
 # Step 1 - Launch Cluster
 minikube start
 
+kubectl cluster-info
+
+kubectl get cs
+
+kubectl describe cs/scheduler
+
 kubectl get no
+
+kubectl describe no/master
 
 # Step 2 - Kubectl Run
 kubectl run http \
@@ -15,13 +23,17 @@ kubectl get deploy
 kubectl describe deploy http
 
 # Step 3 - Kubectl Expose
-kubectl expose deployments http \
---external-ip="172.17.0.63" \
+kubectl expose deploy http \
+--external-ip="172.17.0.22" \
 --port=8000 \
 --target-port=80
 
-curl http://172.17.0.63:8000
+kubectl get svc
 
+kubectl describe svc http
+
+curl http://172.17.0.22:8000
+***
 # Step 4 - Kubectl Run and Expose
 kubectl run httpexposed \
 --image=katacoda/docker-http-server:latest \
