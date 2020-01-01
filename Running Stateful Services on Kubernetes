@@ -1,0 +1,164 @@
+# Running Stateful Services on Kubernetes
+
+# Step 1 - Deploy NFS Server
+docker run -d \
+--name nfs-server \
+--net=host \
+--privileged \
+katacoda/contained-nfs-server:centos7 \
+/exports/data-0001 /exports/data-0002
+
+# Step 2 - Deploy Persistent Volume
+cat << EOF >> nfs-0001.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-0001
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteOnce
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Recycle
+  nfs:
+    server: 172.17.0.21
+    path: /exports/data-0001
+apiVersion: v1
+EOF
+
+cat << EOF >> nfs-0002.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-0002
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Recycle
+  nfs:
+    server: 172.17.0.21
+    path: /exports/data-0002
+EOF
+
+kubectl create -f nfs-0001.yaml
+
+kubectl create -f nfs-0002.yaml
+
+kubectl get pv
+
+# Step 3 - Deploy Persistent Volume Claim
+cat << EOF >> pvc-mysql.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: claim-mysql
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
+EOF
+
+cat << EOF >> pvc-http.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: claim-http
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+EOF
+
+kubectl create -f pvc-mysql.yaml
+
+kubectl create -f pvc-http.yaml
+
+kubectl get pvc
+
+# Step 4 - Use Volume
+cat << EOF >> pod-mysql.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mysql
+  labels:
+    name: mysql
+spec:
+  containers:
+  - name: mysql
+    image: openshift/mysql-55-centos7
+    env:
+      - name: MYSQL_ROOT_PASSWORD
+        value: yourpassword
+      - name: MYSQL_USER
+        value: wp_user
+      - name: MYSQL_PASSWORD
+        value: wp_pass
+      - name: MYSQL_DATABASE
+        value: wp_db
+    ports:
+      - containerPort: 3306
+        name: mysql
+    volumeMounts:
+      - name: mysql-persistent-storage
+        mountPath: /var/lib/mysql/data
+  volumes:
+    - name: mysql-persistent-storage
+      persistentVolumeClaim:
+        claimName: claim-mysql
+EOF
+
+cat << EOF >> pod-www.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: www
+  labels:
+    name: www
+spec:
+  containers:
+  - name: www
+    image: nginx:alpine
+    ports:
+      - containerPort: 80
+        name: www
+    volumeMounts:
+      - name: www-persistent-storage
+        mountPath: /usr/share/nginx/html
+  volumes:
+    - name: www-persistent-storage
+      persistentVolumeClaim:
+        claimName: claim-http
+EOF
+
+kubectl create -f pod-mysql.yaml
+
+kubectl create -f pod-www.yaml
+
+kubectl get po
+
+# Step 5 - Read/Write Data
+docker exec -it nfs-server bash -c "echo 'Hello World' > /exports/data-0001/index.html"
+
+ip=$(kubectl get po www -o yaml | grep podIP | awk '{split($0,a,":"); print a[2]}'); echo $ip
+
+curl $ip
+
+docker exec -it nfs-server bash -c "echo 'Hello NFS World' > /exports/data-0001/index.html"
+
+curl $ip
+
+# Step 6 - Recreate Pod
+kubectl delete po www
+
+kubectl create -f pod-www2.yaml
+
+ip=$(kubectl get po www2 -o yaml | grep podIP | awk '{split($0,a,":"); print a[2]}'); curl $ip
