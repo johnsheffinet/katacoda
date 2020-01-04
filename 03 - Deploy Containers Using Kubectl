@@ -11,7 +11,7 @@ kubectl describe cs/scheduler
 
 kubectl get no
 
-kubectl describe no/master
+kubectl describe no/minikube
 
 export EXTERNAL_IP=$(kubectl cluster-info | grep KubeDNS | grep -oP "(\d{1,3}[\.]){3}\d{1,3}")
 
@@ -25,6 +25,8 @@ kubectl run http \
 kubectl get deploy
 
 kubectl describe deploy http
+
+kubectl get po
 
 # Step 3 - Kubectl Expose
 kubectl expose deploy http \
@@ -47,7 +49,7 @@ kubectl run httpexposed \
 
 kubectl get deploy
 
-kubectl describe deploy httpexposed
+kubectl get po
 
 kubectl get svc
 
@@ -58,6 +60,8 @@ curl http://$EXTERNAL_IP:8001
 # Step 5 - Scale Containers
 kubectl scale deploy http \
 --replicas=3
+
+kubectl get deploy
 
 kubectl get po
 
