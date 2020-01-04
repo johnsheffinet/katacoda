@@ -55,6 +55,28 @@ kubectl describe svc webapp1-svc
 curl host01:30080
 
 # Step 3 - Scale Deployment
+cat << EOF >> deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp1
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: webapp1
+  template:
+    metadata:
+      labels:
+        app: webapp1
+    spec:
+      containers:
+      - name: webapp1
+        image: katacoda/docker-http-server:latest
+        ports:
+        - containerPort: 80
+EOF
+
 kubectl apply -f deployment.yaml
 
 kubectl get deploy
