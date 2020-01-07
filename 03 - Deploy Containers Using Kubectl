@@ -1,7 +1,11 @@
 # Deploy Containers Using Kubectl
 
 # Step 1 - Launch Cluster
+minikube version
+
 minikube start
+
+kubectl version --short
 
 kubectl cluster-info
 
@@ -13,14 +17,13 @@ kubectl get no
 
 kubectl describe no/minikube
 
-export EXTERNAL_IP=$(kubectl cluster-info | grep KubeDNS | grep -oP "(\d{1,3}[\.]){3}\d{1,3}")
+export EXTERNAL_IP=$(minikube ip)
 
 echo $EXTERNAL_IP
 
-# Step 2 - Kubectl Run
-kubectl run http \
---image=katacoda/docker-http-server:latest \
---replicas=1
+# Step 2 - Create Deploy
+kubectl create deploy http \
+--image=katacoda/docker-http-server:latest
 
 kubectl get deploy
 
@@ -28,7 +31,15 @@ kubectl describe deploy http
 
 kubectl get po
 
-# Step 3 - Kubectl Expose
+export POD_NAME =$(kubectl get po -o go-template='{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}')
+
+echo $POD_NAME
+
+kubectl describe po $POD_NAME
+
+curl http://$EXTERNAL_IP:8000
+
+# Step 3 - Expose Deploy
 kubectl expose deploy http \
 --external-ip=$EXTERNAL_IP \
 --port=8000 \
@@ -40,31 +51,23 @@ kubectl describe svc http
 
 curl http://$EXTERNAL_IP:8000
 
-# Step 4 - Kubectl Run and Expose
-kubectl run httpexposed \
---image=katacoda/docker-http-server:latest \
---replicas=1 \
---port=80 \
---hostport=8001
-
-kubectl get deploy
-
-kubectl get po
-
-kubectl get svc
-
-docker ps | grep httpexposed
-
-curl http://$EXTERNAL_IP:8001
-
-# Step 5 - Scale Containers
+# Step 4 - Scale Deploy
 kubectl scale deploy http \
 --replicas=3
 
 kubectl get deploy
 
-kubectl get po
-
-kubectl describe svc http
-
 curl http://$EXTERNAL_IP:8000
+
+# Step 5 - Create, Expose & Scale Deploy
+kubectl create deploy http1 \
+--image=katacoda\docker-http-server:latest
+--expose \
+--external-ip=$EXTERNAL_IP \
+--port=8080 \
+--target-port=80
+--replicas=3
+
+kubectl get deploy,po,svc
+
+curl http://$EXTERNAL_IP:8080
