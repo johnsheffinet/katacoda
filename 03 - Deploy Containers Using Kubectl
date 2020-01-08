@@ -11,48 +11,50 @@ kubectl cluster-info
 
 kubectl get cs
 
-kubectl describe cs/scheduler
+kubectl describe cs
 
 kubectl get no
 
-kubectl describe no/minikube
+kubectl describe no
 
-export EXTERNAL_IP=$(minikube ip)
+# Step 2 - Create Namespace
+kubectl create ns bootcamp
 
-echo $EXTERNAL_IP
+kubectl describe ns/bootcamp
 
-# Step 2 - Create Deploy
-kubectl create deploy http \
---image=katacoda/docker-http-server:latest
+# Step 3 - Create Deploy
+kubectl create deploy/kubernetes-bootcamp \
+--image=gcr.io/google-samples/kubernetes-bootcamp:v1 \
+-ns bootcamp
 
-kubectl get deploy
+kubectl describe deploy,po \
+-ns bootcamp
 
-kubectl describe deploy http
-
-kubectl get po
-
-export POD_NAME =$(kubectl get po -o go-template='{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}')
-
-echo $POD_NAME
-
-kubectl describe po $POD_NAME
-
-curl http://$EXTERNAL_IP:8000
-
-# Step 3 - Expose Deploy
-kubectl expose deploy http \
---external-ip=$EXTERNAL_IP \
+# Step 4 - Expose Deploy
+kubectl expose deploy/kubernetes-bootcamp \
+--type=NodePort \
 --port=8000 \
---target-port=80
+--target-port=8080
 
-kubectl get svc
+kubectl describe svc \
+-ns bootcamp
 
-kubectl describe svc http
+curl $(minikube ip):8000
 
-curl http://$EXTERNAL_IP:8000
+export SVC_IP=$() 
 
-# Step 4 - Scale Deploy
-kubectl scale deploy http \
+echo $SVC_IP
+
+curl $SVC_IP:8000
+
+export $POD_ENDPOINT=$()
+
+echo $POD_ENDPOINT
+
+curl $POD_ENDPOINT
+
+# Step 5 - Scale Deploy
+kubectl scale deploy/kubernetes-bootcamp \
 --replicas=3
 
 kubectl get deploy
@@ -60,13 +62,11 @@ kubectl get deploy
 curl http://$EXTERNAL_IP:8000
 
 # Step 5 - Create, Expose & Scale Deploy
-kubectl create deploy http1 \
---image=katacoda\docker-http-server:latest
---expose \
---external-ip=$EXTERNAL_IP \
---port=8080 \
---target-port=80
---replicas=3
+kubectl run http1 \
+--image=gcr.io/google-samples/kubernetes-bootcamp:v1 \
+--replicas=3 \
+--expose=true \
+--port=80
 
 kubectl get deploy,po,svc
 
