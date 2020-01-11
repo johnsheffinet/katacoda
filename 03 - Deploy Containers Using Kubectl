@@ -1,13 +1,9 @@
 # Deploy Containers Using Kubectl
 
 # Step 1 - Launch Cluster
-minikube version
+minikube version && minikube start
 
-minikube start
-
-kubectl version --short
-
-kubectl cluster-info
+kubectl version --short && kubectl cluster-info
 
 kubectl get cs
 
@@ -23,43 +19,44 @@ kubectl create ns bootcamp
 kubectl describe ns/bootcamp
 
 # Step 3 - Create Deploy
-kubectl create deploy/kubernetes-bootcamp \
+kubectl create deploy kubernetes-bootcamp \
 --image=gcr.io/google-samples/kubernetes-bootcamp:v1 \
--ns bootcamp
+--namespace=bootcamp
 
 kubectl describe deploy,po \
--ns bootcamp
+--namespace bootcamp
 
 # Step 4 - Expose Deploy
 kubectl expose deploy/kubernetes-bootcamp \
 --type=NodePort \
 --port=8000 \
---target-port=8080
+--target-port=8080 \
+--namespace=bootcamp
 
 kubectl describe svc \
--ns bootcamp
+--namespace bootcamp
 
-curl $(minikube ip):8000
+export NODE_PORT=$(kubectl get svc --namespace=bootcamp --output=jsonpath='{.items[*].spec.ports[0].nodePort}') && echo $NODE_PORT
 
-export SVC_IP=$() 
+curl $(minikube ip):$NODE_PORT
 
-echo $SVC_IP
+export SVC_IP=$(kubectl get svc --namespace=bootcamp --output=jsonpath='{.items[*].spec.clusterIP}') && echo $SVC_IP
 
 curl $SVC_IP:8000
 
-export $POD_ENDPOINT=$()
+export $POD_IP=$(kubectl get po --namespace=bootcamp --output=jsonpath='{.items[*].status.podIP}') && echo $POD_IP
 
-echo $POD_ENDPOINT
-
-curl $POD_ENDPOINT
+curl $POD_IP:8080
 
 # Step 5 - Scale Deploy
 kubectl scale deploy/kubernetes-bootcamp \
---replicas=3
+--replicas=3 \
+--namespace=bootcamp
 
-kubectl get deploy
+kubectl get deploy \
+--namespace=bootcamp
 
-curl http://$EXTERNAL_IP:8000
+curl $(minikube ip):$NODE_PORT
 
 # Step 5 - Create, Expose & Scale Deploy
 kubectl run http1 \
