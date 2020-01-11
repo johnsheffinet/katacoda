@@ -64,12 +64,21 @@ kubectl get deploy \
 curl $(minikube ip):$NODE_PORT
 
 # Step 5 - Create, Expose & Scale Deploy
-kubectl run http1 \
+kubectl run app \
 --image=gcr.io/google-samples/kubernetes-bootcamp:v1 \
 --replicas=3 \
 --expose=true \
---port=80
+--port=$POD_PORT \
+--service-overrides='{"apiVersion": "v1", "spec": {"type": "NodePort", "ports": [{"port": $SVC_PORT, "targetPort": $POD_PORT}]}}' \
+--namespace=bootcamp
 
-kubectl get deploy,po,svc
+kubectl get deploy/app \
+--namespace=bootcamp
 
-curl http://$EXTERNAL_IP:8080
+kubectl describe svc/app \
+--namespace=bootcamp
+
+export APP_NODE_PORT=$(kubectl get svc/app --namespace=bootcamp --output=jsonpath='{.items[*].spec.ports[0].nodePort}') && \
+echo $APP_NODE_PORT
+
+curl $(minikube ip):$APP_NODE_PORT
