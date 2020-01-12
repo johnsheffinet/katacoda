@@ -135,6 +135,11 @@ kubectl rollout undo deploy/app \
 kubectl describe deploy/app \
 --namespace=bootcamp
 
-# Step 9 - Delete Deploy
+# Step 9 - Delete Svc, Deploy & Ns
+kubectl delete svc/app \
+--namespace=bootcamp
+
 kubectl delete deploy/app \
 --namespace=bootcamp
+
+kubectl delete ns/bootcamp
