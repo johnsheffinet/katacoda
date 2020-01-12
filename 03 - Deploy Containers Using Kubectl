@@ -2,7 +2,25 @@
 
 # Step 1 - Launch Cluster
 minikube version && \
-minikube start
+minikube start && \
+minikube status
+
+minikube stop && \
+minikube status
+
+minikube delete && \
+minikube status
+
+minikube start && \
+minikube status
+
+minikube addons disable dashboard && \
+minikube addons list | grep dashboard
+
+minikube addons enable dashboard && \
+minikube addons list | grep dashboard
+
+minikube addons open dashboard
 
 kubectl version --short && \
 kubectl cluster-info
@@ -78,20 +96,45 @@ kubectl get deploy/app \
 kubectl describe svc/app \
 --namespace=bootcamp
 
-export APP_NODE_PORT=$(kubectl get svc/app --namespace=bootcamp --output=jsonpath='{.items[*].spec.ports[0].nodePort}') && \
+export APP_NODE_PORT=$(kubectl get svc --namespace=bootcamp --output=jsonpath='{.items[*].spec.ports[0].nodePort}') && \
 echo $APP_NODE_PORT
 
 curl $(minikube ip):$APP_NODE_PORT
 
-export POD_NAME=$(kubectl get po --output=jsonpath='{}') && \
+# Step 7 - View Pod
+export POD_NAME=$(kubectl get po --namespace=bootcamp --output=jsonpath='{.items[*].metadata.name}') && \
 echo $POD_NAME
 
-kubectl logs $POD_NAME
+kubectl logs $POD_NAME \
+--namespace=bootcamp
 
-kubectl exec $POD_NAME curl localhost:$POD_PORT
+kubectl exec $POD_NAME curl localhost:$POD_PORT \
+--namespace=bootcamp
 
-kubectl label po $POD_NAME app=v1
+# Step 8 - Update Deploy
+kubectl label po $POD_NAME app=v1 \
+--namespace=bootcamp
 
-kubectl get po --label=app=v1
+kubectl get po \
+--label=app=v1 \
+--namespace=bootcamp
 
-kubectl delete deploy two
+kubectl set image deploy/app \
+--image=kubernetes-bootcamp=jocatalin/kubernetes-bootcamp:v2 \
+--namespace=bootcamp
+
+kubectl rollout status deploy/app \
+--namespace=bootcamp
+
+kubectl describe deploy/app \
+--namespace=bootcamp
+
+kubectl rollout undo deploy/app \
+--namespace=bootcamp
+
+kubectl describe deploy/app \
+--namespace=bootcamp
+
+# Step 9 - Delete Deploy
+kubectl delete deploy/app \
+--namespace=bootcamp
