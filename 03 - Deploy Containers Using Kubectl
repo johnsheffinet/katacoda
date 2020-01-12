@@ -63,7 +63,7 @@ kubectl get deploy \
 
 curl $(minikube ip):$NODE_PORT
 
-# Step 5 - Create, Expose & Scale Deploy
+# Step 6 - Create, Expose & Scale Deploy
 kubectl run app \
 --image=gcr.io/google-samples/kubernetes-bootcamp:v1 \
 --replicas=3 \
@@ -82,3 +82,16 @@ export APP_NODE_PORT=$(kubectl get svc/app --namespace=bootcamp --output=jsonpat
 echo $APP_NODE_PORT
 
 curl $(minikube ip):$APP_NODE_PORT
+
+export POD_NAME=$(kubectl get po --output=jsonpath='{}') && \
+echo $POD_NAME
+
+kubectl logs $POD_NAME
+
+kubectl exec $POD_NAME curl localhost:$POD_PORT
+
+kubectl label po $POD_NAME app=v1
+
+kubectl get po --label=app=v1
+
+kubectl delete deploy two
