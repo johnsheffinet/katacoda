@@ -27,10 +27,18 @@ kubectl cluster-info
 
 kubectl get cs,no
 
-# Step 2 - Create Namespace
-kubectl create ns bootcamp
+# Step 2 - Create Namespace & Context
+kubectl create ns bootcamp && \
+kubectl get ns/bootcamp
 
-kubectl get ns
+kubectl config set-context bc \
+--cluster=minikube \
+--namespace=bootcamp \
+--user=minikube && \
+kubectl config view --output=jsonpath='{.contexts[?(@.name=="bcext.namespace}{"\n"}'
+
+kubectl config use-context bc && \
+kubectl config current-context
 
 # Step 3 - Create Deploy
 kubectl create deploy kubernetes-bootcamp \
