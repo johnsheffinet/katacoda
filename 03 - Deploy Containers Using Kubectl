@@ -70,6 +70,22 @@ curl $SVC_IP:$SVC_PORT
 curl $POD_IP:$POD_PORT
 
 # Step 5 - Scale Deployment
+kubectl scale deploy/kubernetes-bootcamp \
+--replicas=3
+
+sleep 3s 
+
+kubectl get deploy/kubernetes-bootcamp
+
+kubectl get po \
+-l=app=kubernetes-bootcamp
+
+for (( i=0; i<3; i++ ))
+do  
+  curl $NODE_IP:$NODE_PORT
+  sleep 2s
+done
+
 # Step 6 - Run Deployment
 # Step 7 - View Pod
 # Step 8 - Update Deployment
