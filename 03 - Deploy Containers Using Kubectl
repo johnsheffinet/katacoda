@@ -91,13 +91,6 @@ done
 # Step 8 - Update Deployment
 # Step 9 - Delete Service, Deployment, Context & Namespace
 
-# Step 5 - Scale Deploy
-kubectl scale deploy/kubernetes-bootcamp \
---replicas=3 && \
-kubectl get deploy/kubernetes-bootcamp
-
-curl $(minikube ip):$NODE_PORT
-
 # Step 6 - Create, Expose & Scale Deploy
 kubectl run app \
 --image=gcr.io/google-samples/kubernetes-bootcamp:v1 \
