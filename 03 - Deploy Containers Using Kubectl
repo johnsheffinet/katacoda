@@ -57,7 +57,7 @@ echo NODE_PORT: $NODE_PORT
 export POD_NAME=$(kubectl get po -l=app=kubernetes-bootcamp --output=jsonpath='{.items[0].metadata.name}') && \
 echo POD_NAME: $POD_NAME
 
-export POD_IP=$(kubectl get po/$POD_NAME --output=jsonpath='{.status.hostIP}') && \
+export POD_IP=$(kubectl get po/$POD_NAME --output=jsonpath='{.status.podIP}') && \
 echo POD_IP: $POD_IP
 
 export POD_PORT=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="kubernetes-bootcamp")].spec.ports[0].targetPort}') && \
