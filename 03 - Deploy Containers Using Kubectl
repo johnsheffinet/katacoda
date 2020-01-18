@@ -41,19 +41,19 @@ kubectl expose deploy/kubernetes-bootcamp \
 --type=NodePort \
 --port=$SVC_PORT \
 --target-port=$POD_PORT && \
-kubectl describe svc
+kubectl describe svc/kubernetes-bootcamp
 
-export NODE_PORT=$(kubectl get svc --namespace=bootcamp --output=jsonpath='{.items[*].spec.ports[0].nodePort}') && \
+export NODE_PORT=$(kubectl get svc/kubernetes-bootcamp --output=jsonpath='{.spec.ports[0].nodePort}') && \
 echo $NODE_PORT
 
 curl $(minikube ip):$NODE_PORT
 
-export SVC_IP=$(kubectl get svc --namespace=bootcamp --output=jsonpath='{.items[*].spec.clusterIP}') && \
+export SVC_IP=$(kubectl get svc/kubernetes-bootcamp --output=jsonpath='{.spec.clusterIP}') && \
 echo $SVC_IP
 
 curl $SVC_IP:$SVC_PORT
 
-export POD_IP=$(kubectl get po --namespace=bootcamp --output=jsonpath='{.items[*].status.podIP}') && \
+export POD_IP=$(kubectl get po --output=jsonpath='{.items[*].status.podIP}') && \
 echo $POD_IP
 
 curl $POD_IP:$POD_PORT
@@ -61,12 +61,12 @@ curl $POD_IP:$POD_PORT
 # Step 5 - Scale Deploy
 kubectl scale deploy/kubernetes-bootcamp \
 --replicas=3 && \
-kubectl get deploy
+kubectl get deploy/kubernetes-bootcamp
 
 curl $(minikube ip):$NODE_PORT
 
 # Step 6 - Create, Expose & Scale Deploy
-**kubectl run app \
+kubectl run app \
 --image=gcr.io/google-samples/kubernetes-bootcamp:v1 \
 --replicas=3 \
 --expose=true \
@@ -81,7 +81,7 @@ echo $APP_NODE_PORT
 curl $(minikube ip):$APP_NODE_PORT
 
 # Step 7 - View Pod
-export POD_NAME=$(kubectl get po --namespace=bootcamp --output=jsonpath='{.items[*].metadata.name}') && \
+export POD_NAME=$(kubectl get po --output=jsonpath='{.items[*].metadata.name}') && \
 echo $POD_NAME
 
 kubectl logs $POD_NAME \
