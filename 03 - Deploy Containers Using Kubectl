@@ -1,5 +1,4 @@
 # Deploy Containers Using Kubectl
-
 # Step 1 - Launch Cluster
 minikube version
 
@@ -20,43 +19,61 @@ kubectl config set-context bc \
 --cluster=minikube \
 --namespace=bootcamp \
 --user=minikube && \
-kubectl config view --output=jsonpath='{.contexts[?(@.name=="bc")].context.namespace}{"\n"}'
+kubectl config view
 
 kubectl config use-context bc && \
 kubectl config current-context
 
-# Step 3 - Create Deploy
+# Step 3 - Create Deployment
 kubectl create deploy kubernetes-bootcamp \
---image=gcr.io/google-samples/kubernetes-bootcamp:v1 && \
-kubectl get deploy,po
+--image=gcr.io/google-samples/kubernetes-bootcamp:v1
 
-# Step 4 - Expose Deploy
-export SVC_PORT=8000 && \
-echo $SVC_PORT
+sleep 3s 
 
-export POD_PORT=8080 && \
-echo $POD_PORT
+kubectl get deploy/kubernetes-bootcamp
 
+kubectl get po \
+-l=app=kubernetes-bootcamp
+
+# Step 4 - Expose Deployment
 kubectl expose deploy/kubernetes-bootcamp \
 --type=NodePort \
---port=$SVC_PORT \
---target-port=$POD_PORT && \
+--port=8000 \
+--target-port=8080 && \
 kubectl describe svc/kubernetes-bootcamp
 
-export NODE_PORT=$(kubectl get svc/kubernetes-bootcamp --output=jsonpath='{.spec.ports[0].nodePort}') && \
-echo $NODE_PORT
+export SVC_IP=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="kubernetes-bootcamp")].spec.clusterIP}') && \
+echo SVC_IP: $SVC_IP
 
-curl $(minikube ip):$NODE_PORT
+export SVC_PORT=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="kubernetes-bootcamp")].spec.ports[0].port}') && \
+echo SVC_PORT: $SVC_PORT
 
-export SVC_IP=$(kubectl get svc/kubernetes-bootcamp --output=jsonpath='{.spec.clusterIP}') && \
-echo $SVC_IP
+export NODE_IP=$(minikube ip) && \
+echo NODE_IP: $NODE_IP
+
+export NODE_PORT=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="kubernetes-bootcamp")].spec.ports[0].nodePort}') && \
+echo NODE_PORT: $NODE_PORT
+
+export POD_NAME=$(kubectl get po -l=app=kubernetes-bootcamp --output=jsonpath='{.items[0].metadata.name}') && \
+echo POD_NAME: $POD_NAME
+
+export POD_IP=$(kubectl get po/$POD_NAME --output=jsonpath='{.status.hostIP}') && \
+echo POD_IP: $POD_IP
+
+export POD_PORT=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="kubernetes-bootcamp")].spec.ports[0].targetPort}') && \
+echo POD_PORT: $POD_PORT
+
+curl $NODE_IP:$NODE_PORT
 
 curl $SVC_IP:$SVC_PORT
 
-export POD_IP=$(kubectl get po --output=jsonpath='{.items[*].status.podIP}') && \
-echo $POD_IP
-
 curl $POD_IP:$POD_PORT
+
+# Step 5 - Scale Deployment
+# Step 6 - Run Deployment
+# Step 7 - View Pod
+# Step 8 - Update Deployment
+# Step 9 - Delete Service, Deployment, Context & Namespace
 
 # Step 5 - Scale Deploy
 kubectl scale deploy/kubernetes-bootcamp \
