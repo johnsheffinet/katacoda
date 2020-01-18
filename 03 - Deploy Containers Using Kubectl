@@ -1,28 +1,13 @@
 # Deploy Containers Using Kubectl
 
 # Step 1 - Launch Cluster
-minikube version && \
-minikube start && \
-minikube status
-
-minikube stop && \
-minikube status
-
-minikube delete && \
-minikube status
+minikube version
 
 minikube start && \
 minikube status
 
-minikube addons disable dashboard && \
-minikube addons list | grep dashboard
+kubectl version --short
 
-minikube addons enable dashboard && \
-minikube addons list | grep dashboard
-
-minikube addons open dashboard
-
-kubectl version --short && \
 kubectl cluster-info
 
 kubectl get cs,no
@@ -35,18 +20,15 @@ kubectl config set-context bc \
 --cluster=minikube \
 --namespace=bootcamp \
 --user=minikube && \
-kubectl config view --output=jsonpath='{.contexts[?(@.name=="bcext.namespace}{"\n"}'
+kubectl config view --output=jsonpath='{.contexts[?(@.name=="bc")].context.namespace}{"\n"}'
 
 kubectl config use-context bc && \
 kubectl config current-context
 
 # Step 3 - Create Deploy
 kubectl create deploy kubernetes-bootcamp \
---image=gcr.io/google-samples/kubernetes-bootcamp:v1 \
---namespace=bootcamp
-
-kubectl get deploy,po \
---namespace=bootcamp
+--image=gcr.io/google-samples/kubernetes-bootcamp:v1 && \
+kubectl get deploy,po
 
 # Step 4 - Expose Deploy
 export SVC_PORT=8000 && \
@@ -58,11 +40,8 @@ echo $POD_PORT
 kubectl expose deploy/kubernetes-bootcamp \
 --type=NodePort \
 --port=$SVC_PORT \
---target-port=$POD_PORT \
---namespace=bootcamp
-
-kubectl describe svc \
---namespace=bootcamp
+--target-port=$POD_PORT && \
+kubectl describe svc
 
 export NODE_PORT=$(kubectl get svc --namespace=bootcamp --output=jsonpath='{.items[*].spec.ports[0].nodePort}') && \
 echo $NODE_PORT
@@ -81,28 +60,20 @@ curl $POD_IP:$POD_PORT
 
 # Step 5 - Scale Deploy
 kubectl scale deploy/kubernetes-bootcamp \
---replicas=3 \
---namespace=bootcamp
-
-kubectl get deploy \
---namespace=bootcamp
+--replicas=3 && \
+kubectl get deploy
 
 curl $(minikube ip):$NODE_PORT
 
 # Step 6 - Create, Expose & Scale Deploy
-kubectl run app \
+**kubectl run app \
 --image=gcr.io/google-samples/kubernetes-bootcamp:v1 \
 --replicas=3 \
 --expose=true \
 --port=$POD_PORT \
---service-overrides='{"apiVersion": "v1", "spec": {"type": "NodePort", "ports": [{"port": $SVC_PORT, "targetPort": $POD_PORT}]}}' \
---namespace=bootcamp
-
-kubectl get deploy/app \
---namespace=bootcamp
-
-kubectl describe svc/app \
---namespace=bootcamp
+--service-overrides='{"apiVersion": "v1", "spec": {"type": "NodePort", "ports": [{"port": $SVC_PORT, "targetPort": $POD_PORT}]}}' && \
+kubectl get deploy/app && \
+kubectl get svc/app
 
 export APP_NODE_PORT=$(kubectl get svc --namespace=bootcamp --output=jsonpath='{.items[*].spec.ports[0].nodePort}') && \
 echo $APP_NODE_PORT
