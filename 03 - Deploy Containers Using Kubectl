@@ -1,5 +1,5 @@
 # Deploy Containers Using Kubectl
-# Step 1 - Launch Cluster
+# Step 1 - Create Cluster
 minikube version
 
 minikube start && \
@@ -26,20 +26,16 @@ kubectl config current-context
 
 # Step 3 - Create Deployment
 kubectl create deploy kubernetes-bootcamp \
---image=gcr.io/google-samples/kubernetes-bootcamp:v1
-
-sleep 3s 
-
+--image=gcr.io/google-samples/kubernetes-bootcamp:v1 && \
+kubectl rollout status deploy/kubernetes-bootcamp && \
 kubectl get deploy/kubernetes-bootcamp
-
-kubectl get po \
--l=app=kubernetes-bootcamp
 
 # Step 4 - Expose Deployment
 kubectl expose deploy/kubernetes-bootcamp \
 --type=NodePort \
 --port=8000 \
 --target-port=8080 && \
+kubectl rollout status deploy/kubernetes-bootcamp && \
 kubectl describe svc/kubernetes-bootcamp
 
 export SVC_IP=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="kubernetes-bootcamp")].spec.clusterIP}') && \
@@ -71,14 +67,9 @@ curl $POD_IP:$POD_PORT
 
 # Step 5 - Scale Deployment
 kubectl scale deploy/kubernetes-bootcamp \
---replicas=3
-
-sleep 3s 
-
-kubectl get deploy/kubernetes-bootcamp
-
-kubectl get po \
--l=app=kubernetes-bootcamp
+--replicas=3 && \
+kubectl rollout status deploy/kubernetes-bootcamp && \
+kubectl describe svc/kubernetes-bootcamp
 
 for (( i=0; i<3; i++ ))
 do  
@@ -86,16 +77,58 @@ do
   sleep 2s
 done
 
-# Step 6 - Run Deployment
-# Step 7 - View Pod
-# Step 8 - Update Deployment
-# Step 9 - Delete Service, Deployment, Context & Namespace
+# Step 6 - View Pod
+kubectl logs $POD_NAME
+
+kubectl exec $POD_NAME curl localhost:$POD_NAME
+
+# Step 7 - Update Deployment
+kubectl label deploy/kubernetes-bootcamp ver=v1 && \
+kubectl rollout status deploy/kubernetes-bootcamp && \
+kubectl get deploy/kubernetes-bootcamp --show-labels
+
+kubectl set-image deploy/kubernetes-bootcamp jocatalin/kubernetes-bootcamp:v2 && \
+kubectl rollout status deploy/kubernetes-bootcamp && \
+kubectl get deploy/kubernetes-bootcamp --output=jsonpath='{.image}'
+
+kubectl rollout undo deploy/kubernetes-bootcamp && \
+kubectl rollout status deploy/kubernetes-bootcamp && \
+kubectl get deploy/kubernetes-bootcamp --output=jsonpath='{.image}'
+
+# Step 8 - Run Deployment
+kubectl run k8s-bc \
+--image=gcr.io/google-samples/kubernetes-bootcamp:v1 \
+--replicas=3 \
+--expose=true \
+--port=8080 \
+--service-overrides='{"apiVersion": "v1", "spec": {"type": "NodePort", "ports": [{"port": 8000, "targetPort": 8080}]}}' && \
+kubectl rollout status deploy/k8s-bc && \
+kubectl describe svc/k8s-bc
+
+export NODE_PORT=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="k8s-bc")].spec.ports[0].nodePort}') && \
+echo NODE_PORT: $NODE_PORT
+
+for (( i=0; i<3; i++ ))
+do  
+  curl $NODE_IP:$NODE_PORT
+  sleep 2s
+done
+
+# Step 9 - Clean Up
+kubectl delete svc/kubernetes-bootcamp && \
+kubectl get svc
+
+kubectl delete deploy/kubernetes-bootcamp && \
+kubectl get deploy
+
+kubectl delete ns/bootcamp && \
+kubectl get ns
 
 # Step 6 - Create, Expose & Scale Deploy
 kubectl run app \
 --image=gcr.io/google-samples/kubernetes-bootcamp:v1 \
 --replicas=3 \
---expose=true \
+--expose=true \Clean Up
 --port=$POD_PORT \
 --service-overrides='{"apiVersion": "v1", "spec": {"type": "NodePort", "ports": [{"port": $SVC_PORT, "targetPort": $POD_PORT}]}}' && \
 kubectl get deploy/app && \
@@ -105,16 +138,6 @@ export APP_NODE_PORT=$(kubectl get svc --namespace=bootcamp --output=jsonpath='{
 echo $APP_NODE_PORT
 
 curl $(minikube ip):$APP_NODE_PORT
-
-# Step 7 - View Pod
-export POD_NAME=$(kubectl get po --output=jsonpath='{.items[*].metadata.name}') && \
-echo $POD_NAME
-
-kubectl logs $POD_NAME \
---namespace=bootcamp
-
-kubectl exec $POD_NAME curl localhost:$POD_PORT \
---namespace=bootcamp
 
 # Step 8 - Update Deploy
 kubectl label po $POD_NAME app=v1 \
