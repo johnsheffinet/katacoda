@@ -9,6 +9,8 @@ kubectl version --short
 
 kubectl cluster-info
 
+sleep 10s
+
 kubectl get cs,no
 
 # Step 1 - Create Namespace & Context
