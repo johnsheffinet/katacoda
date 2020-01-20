@@ -122,7 +122,8 @@ kubectl run k8s-bc \
 --expose=true \
 --port=8080 \
 --service-overrides='{"apiVersion": "v1", "spec": {"type": "NodePort", "ports": [{"port": 8000, "targetPort": 8080}]}}' && \
-kubectl rollout status deploy/k8s-bc
+kubectl rollout status deploy/k8s-bc&& \
+kubectl describe svc/kubernetes-bootcamp
 
 export NODE_PORT=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="k8s-bc")].spec.ports[0].nodePort}') && \
 echo NODE_PORT: $NODE_PORT [$(kubectl describe svc/k8s-bc | grep -w NodePort:)]
