@@ -1,5 +1,5 @@
-# Deploy Containers Using Kubectl
-# Step 0 - Create Cluster
+### Deploy Containers Using Kubectl
+###### Step 0 - Create Cluster ######
 minikube version
 
 minikube start && \
@@ -13,7 +13,7 @@ sleep 10s
 
 kubectl get cs,no
 
-# Step 1 - Create Namespace & Context
+###### Step 1 - Create Namespace & Context ######
 kubectl create ns bootcamp && \
 kubectl get ns/bootcamp
 
@@ -26,13 +26,13 @@ kubectl config view
 kubectl config use-context bc && \
 kubectl config current-context
 
-# Step 2 - Create Deployment
+###### Step 2 - Create Deployment ######
 kubectl create deploy kubernetes-bootcamp \
 --image=gcr.io/google-samples/kubernetes-bootcamp:v1 && \
 kubectl rollout status deploy/kubernetes-bootcamp && \
 kubectl get deploy/kubernetes-bootcamp
 
-# Step 3 - Expose Deployment
+###### Step 3 - Expose Deployment ######
 kubectl expose deploy/kubernetes-bootcamp \
 --type=NodePort \
 --port=8000 \
@@ -67,7 +67,7 @@ curl $SVC_IP:$SVC_PORT
 
 curl $POD_IP:$POD_PORT
 
-# Step 4 - Scale Deployment
+###### Step 4 - Scale Deployment ######
 kubectl scale deploy/kubernetes-bootcamp \
 --replicas=3 && \
 kubectl rollout status deploy/kubernetes-bootcamp && \
@@ -79,12 +79,12 @@ do
   sleep 2s
 done
 
-# Step 5 - View Pod
+###### Step 5 - View Container ######
 kubectl logs $POD_NAME
 
 kubectl exec $POD_NAME curl localhost:$POD_PORT
 
-# Step 6 - Update Deployment
+###### Step 6 - Update Deployment ######
 kubectl label deploy/kubernetes-bootcamp ver=v1 && \
 kubectl rollout status deploy/kubernetes-bootcamp && \
 kubectl get deploy/kubernetes-bootcamp --show-labels
@@ -103,7 +103,7 @@ do
   sleep 2s
 done
 
-# Step 7 - Run Deployment
+###### Step 7 - Run Deployment ######
 kubectl run k8s-bc \
 --image=gcr.io/google-samples/kubernetes-bootcamp:v1 \
 --replicas=3 \
@@ -122,7 +122,9 @@ do
   sleep 2s
 done
 
-# Step 9 - Clean Up
+###### Step 8 - Run CronJob ######
+
+###### Step 9 - Clean UP ######
 kubectl delete svc/kubernetes-bootcamp && \
 kubectl get svc
 
