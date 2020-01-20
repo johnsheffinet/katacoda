@@ -1,16 +1,12 @@
-### Deploy Containers Using Kubectl
+### Deploy Containers Using Kubectl ###
 ###### Step 0 - Create Cluster ######
-minikube version
-
-minikube start && \
+minikube version && \
+minikube start --wait=true && \
 minikube status
 
-kubectl version --short
-
-kubectl cluster-info
-
-sleep 10s
-
+kubectl version --short && \
+kubectl wait --for=condition=Ready no/minikube && \
+kubectl cluster-info && \
 kubectl get cs,no
 
 ###### Step 1 - Create Namespace & Context ######
@@ -36,36 +32,34 @@ kubectl get deploy/kubernetes-bootcamp
 kubectl expose deploy/kubernetes-bootcamp \
 --type=NodePort \
 --port=8000 \
---target-port=8080 && \
-kubectl rollout status deploy/kubernetes-bootcamp && \
-kubectl describe svc/kubernetes-bootcamp
+--target-port=8080
 
 export SVC_IP=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="kubernetes-bootcamp")].spec.clusterIP}') && \
-echo SVC_IP: $SVC_IP
+echo SVC_IP: $SVC_IP [$(kubectl describe svc/kubernetes-bootcamp | grep -w IP:)]
 
 export SVC_PORT=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="kubernetes-bootcamp")].spec.ports[0].port}') && \
-echo SVC_PORT: $SVC_PORT
+echo SVC_PORT: $SVC_PORT [$(kubectl describe svc/kubernetes-bootcamp | grep -w Port:)]
 
 export NODE_IP=$(minikube ip) && \
 echo NODE_IP: $NODE_IP
 
 export NODE_PORT=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="kubernetes-bootcamp")].spec.ports[0].nodePort}') && \
-echo NODE_PORT: $NODE_PORT
+echo NODE_PORT: $NODE_PORT [$(kubectl describe svc/kubernetes-bootcamp | grep -w NodePort:)]
 
 export POD_NAME=$(kubectl get po -l=app=kubernetes-bootcamp --output=jsonpath='{.items[0].metadata.name}') && \
 echo POD_NAME: $POD_NAME
 
 export POD_IP=$(kubectl get po/$POD_NAME --output=jsonpath='{.status.podIP}') && \
-echo POD_IP: $POD_IP
+echo POD_IP: $POD_IP [$(kubectl describe svc/kubernetes-bootcamp | grep -w Endpoints:)]
 
 export POD_PORT=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="kubernetes-bootcamp")].spec.ports[0].targetPort}') && \
-echo POD_PORT: $POD_PORT
+echo POD_PORT: $POD_PORT [$(kubectl describe svc/kubernetes-bootcamp | grep -w TargetPort:)]
 
-curl $NODE_IP:$NODE_PORT
+curl --silent $NODE_IP:$NODE_PORT
 
-curl $SVC_IP:$SVC_PORT
+curl --silent $SVC_IP:$SVC_PORT
 
-curl $POD_IP:$POD_PORT
+curl --silent $POD_IP:$POD_PORT
 
 ###### Step 4 - Scale Deployment ######
 kubectl scale deploy/kubernetes-bootcamp \
@@ -75,23 +69,41 @@ kubectl describe svc/kubernetes-bootcamp
 
 for (( i=0; i<3; i++ ))
 do  
-  curl $NODE_IP:$NODE_PORT
-  sleep 2s
+  sleep 5s
+  curl --silent $NODE_IP:$NODE_PORT
 done
 
 ###### Step 5 - View Container ######
-kubectl logs $POD_NAME
+export CONTAINER_NAME=$(kubectl get po/$POD_NAME --output=jsonpath='{.spec.containers[0].name}') && \
+echo $CONTAINER_NAME
 
-kubectl exec $POD_NAME curl localhost:$POD_PORT
+kubectl logs $POD_NAME \
+--container=$CONTAINER_NAME
+
+kubectl exec $POD_NAME \
+--container=$CONTAINER_NAME \
+-- curl --silent localhost:$POD_PORT
 
 ###### Step 6 - Update Deployment ######
 kubectl label deploy/kubernetes-bootcamp ver=v1 && \
 kubectl rollout status deploy/kubernetes-bootcamp && \
 kubectl get deploy/kubernetes-bootcamp --show-labels
 
+for (( i=0; i<3; i++ ))
+do  
+  sleep 5s
+  curl --silent $NODE_IP:$NODE_PORT
+done
+
 kubectl set image deploy/kubernetes-bootcamp kubernetes-bootcamp=jocatalin/kubernetes-bootcamp:v2 && \
 kubectl rollout status deploy/kubernetes-bootcamp && \
 kubectl get deploy/kubernetes-bootcamp --output=jsonpath='{.spec.template.spec.containers[?(@.name=="kubernetes-bootcamp")].image}'
+
+for (( i=0; i<3; i++ ))
+do  
+  sleep 5s
+  curl --silent $NODE_IP:$NODE_PORT
+done
 
 kubectl rollout undo deploy/kubernetes-bootcamp && \
 kubectl rollout status deploy/kubernetes-bootcamp && \
@@ -99,8 +111,8 @@ kubectl get deploy/kubernetes-bootcamp --output=jsonpath='{.spec.template.spec.c
 
 for (( i=0; i<3; i++ ))
 do  
-  curl $NODE_IP:$NODE_PORT
-  sleep 2s
+  sleep 5s
+  curl --silent $NODE_IP:$NODE_PORT
 done
 
 ###### Step 7 - Run Deployment ######
@@ -110,16 +122,15 @@ kubectl run k8s-bc \
 --expose=true \
 --port=8080 \
 --service-overrides='{"apiVersion": "v1", "spec": {"type": "NodePort", "ports": [{"port": 8000, "targetPort": 8080}]}}' && \
-kubectl rollout status deploy/k8s-bc && \
-kubectl describe svc/k8s-bc
+kubectl rollout status deploy/k8s-bc
 
 export NODE_PORT=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="k8s-bc")].spec.ports[0].nodePort}') && \
-echo NODE_PORT: $NODE_PORT
+echo NODE_PORT: $NODE_PORT [$(kubectl describe svc/k8s-bc | grep -w NodePort:)]
 
 for (( i=0; i<3; i++ ))
 do  
-  curl $NODE_IP:$NODE_PORT
-  sleep 2s
+  sleep 5s
+  curl --silent $NODE_IP:$NODE_PORT
 done
 
 ###### Step 8 - Run CronJob ######
