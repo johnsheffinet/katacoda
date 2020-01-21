@@ -122,8 +122,10 @@ kubectl run k8s-bc \
 --expose=true \
 --port=8080 \
 --service-overrides='{"apiVersion": "v1", "spec": {"type": "NodePort", "ports": [{"port": 8000, "targetPort": 8080}]}}' && \
-kubectl rollout status deploy/k8s-bc&& \
-kubectl describe svc/kubernetes-bootcamp
+kubectl rollout status deploy/k8s-bc && \
+kubectl get po -l=run=k8s-bc && \
+kubectl get deploy/k8s-bc && \
+kubectl describe svc/k8s-bc
 
 export NODE_PORT=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="k8s-bc")].spec.ports[0].nodePort}') && \
 echo NODE_PORT: $NODE_PORT [$(kubectl describe svc/k8s-bc | grep -w NodePort:)]
@@ -135,6 +137,18 @@ do
 done
 
 ###### Step 8 - Run CronJob ######
+kubectl run hello \
+--image=busybox \
+-- /bin/sh -c "date; echo Hello from the Kubernetes cluster" \
+--restart=OnFailure \
+--schedule="*/1 * * * *" && \
+kubectl rollout status cronjob/hello && \
+kubectl get deploy/hello --watch=true
+
+export POD_NAME=$(kubectl get cronjobs/hello --output=jsonpath='{.items[0].metadata.name}') && \
+echo POD_NAME: $POD_NAME
+
+kubectl logs $POD_NAME
 
 ###### Step 9 - Clean UP ######
 kubectl delete svc/kubernetes-bootcamp && \
