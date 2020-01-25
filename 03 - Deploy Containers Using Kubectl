@@ -136,16 +136,22 @@ do
   curl --silent $NODE_IP:$NODE_PORT
 done
 
-###### Step 8 - Run CronJob ######
-kubectl run hello \
---image=busybox \
--- /bin/sh -c "date; echo Hello from the Kubernetes cluster" \
---restart=OnFailure \
---schedule="*/1 * * * *" && \
-kubectl rollout status cronjob/hello && \
-kubectl get deploy/hello --watch=true
+###### Step 8 - Create Job & Cronjob ######
 
-export POD_NAME=$(kubectl get cronjobs/hello --output=jsonpath='{.items[0].metadata.name}') && \
+kubectl create job k8s-job \
+--image=busybox \
+-- bin/sh -c 'date; echo Hello from Kubernetes cluster' && \
+kubectl wait --for=condition=complete job/k8s-job && \
+kubectl get job/k8s-job && \
+kubectl logs job/k8s-job
+
+kubectl create cronjob k8s-cronjob \
+--schedule='*/1 * * * *' \
+--image=busybox \
+-- bin/sh -c 'date; echo Hello from Kubernetes cluster' && \
+kubectl get cronjob/k8s-cronjob
+
+export POD_NAME=$(kubectl get po --output=jsonpath='{.items[0].metadata.name}') && \
 echo POD_NAME: $POD_NAME
 
 kubectl logs $POD_NAME
