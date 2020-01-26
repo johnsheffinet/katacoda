@@ -102,14 +102,36 @@ spec:
   type: NodePort
 EOF
 
-kubectl apply -f deployment.yaml
+kubectl apply --filename=svc.yaml && \
+kubectl rollout status deploy/k8s-deploy && \
+kubectl get deploy/k8s-deploy
 
-kubectl get deploy
+export SVC_IP=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="k8s-deploy")].spec.clusterIP}') && \
+echo SVC_IP: $SVC_IP [$(kubectl describe svc/k8s-deploy | grep -w IP:)]
 
-kubectl get po
+export SVC_PORT=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="k8s-deploy")].spec.ports[0].port}') && \
+echo SVC_PORT: $SVC_PORT [$(kubectl describe svc/k8s-deploy | grep -w Port:)]
 
-curl host01:30080
+export NODE_IP=$(minikube ip) && \
+echo NODE_IP: $NODE_IP
 
+export NODE_PORT=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="k8s-deploy")].spec.ports[0].nodePort}') && \
+echo NODE_PORT: $NODE_PORT [$(kubectl describe svc/k8s-deploy | grep -w NodePort:)]
+
+export POD_NAME=$(kubectl get po -l=app=k8s-deploy --output=jsonpath='{.items[0].metadata.name}') && \
+echo POD_NAME: $POD_NAME
+
+export POD_IP=$(kubectl get po/$POD_NAME --output=jsonpath='{.status.podIP}') && \
+echo POD_IP: $POD_IP [$(kubectl describe svc/k8s-deploy | grep -w Endpoints:)]
+
+export POD_PORT=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="k8s-deploy")].spec.ports[0].targetPort}') && \
+echo POD_PORT: $POD_PORT [$(kubectl describe svc/k8s-deploy | grep -w TargetPort:)]
+
+curl --silent $NODE_IP:$NODE_PORT
+
+curl --silent $SVC_IP:$SVC_PORT
+
+curl --silent $POD_IP:$POD_PORT
 
 ###### Step 4 - Scale Deployment ######
 
