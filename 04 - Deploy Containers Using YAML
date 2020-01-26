@@ -26,31 +26,17 @@ EOF
 kubectl apply --filename ns.yaml && \
 kubectl get ns/k8s-ns
 
+kubectl config set-context k8s-context \
+--cluster=minikube \
+--namespace=k8s-ns \
+--user=minikube && \
+kubectl config view && \
+kubectl config use-context k8s-context && \
+kubectl config current-context
 
 ###### Step 2 - Create Deployment ######
-cat << EOF >> deploy.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: webapp1
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: webapp1
-  template:
-    metadata:
-      labels:
-        app: webapp1
-    spec:
-      containers:
-      - name: webapp1
-        image: katacoda/docker-http-server:latest
-        ports:
-        - containerPort: 80
-EOF
 
----
+cat << EOF >> deploy.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -87,34 +73,15 @@ spec:
       schedulerName: default-scheduler
       securityContext: {}
       terminationGracePeriodSeconds: 30
----
-cat << EOF >> service.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: webapp1-svc
-  labels:
-    app: webapp1
-spec:
-  type: NodePort
-  ports:
-  - port: 80
-    nodePort: 30080
-  selector:
-    app: webapp1
 EOF
 
-kubectl create -f service.yaml
-
-kubectl get svc
-
-kubectl describe svc webapp1-svc
-
-curl host01:30080
+kubectl apply --filename=deploy.yaml && \
+kubectl rollout status deploy/k8s-deploy && \
+kubectl get deploy/k8s-deploy
 
 ###### Step 3 - Expose Deployment ######
 
----
+cat << EOF >> svc.yaml
 apiVersion: v1
 kind: Service
 metadata:
@@ -133,27 +100,6 @@ spec:
     app: k8s-deploy
   sessionAffinity: None
   type: NodePort
----
-cat << EOF >> deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: webapp1
-spec:
-  replicas: 5
-  selector:
-    matchLabels:
-      app: webapp1
-  template:
-    metadata:
-      labels:
-        app: webapp1
-    spec:
-      containers:
-      - name: webapp1
-        image: katacoda/docker-http-server:latest
-        ports:
-        - containerPort: 80
 EOF
 
 kubectl apply -f deployment.yaml
@@ -312,4 +258,42 @@ spec:
 
 
 ###### Step 9 - Delete Service, Deploy, Namespace & Context ######
+
+cat << EOF >> deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp1
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: webapp1
+  template:
+    metadata:
+      labels:
+        app: webapp1
+    spec:
+      containers:
+      - name: webapp1
+        image: katacoda/docker-http-server:latest
+        ports:
+        - containerPort: 80
+EOF
+
+cat << EOF >> svc.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp1-svc
+  labels:
+    app: webapp1
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    nodePort: 30080
+  selector:
+    app: webapp1
+EOF
 
