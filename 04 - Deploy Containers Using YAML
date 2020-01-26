@@ -74,7 +74,28 @@ kubectl get deploy/k8s-deploy
 kubectl expose deploy/k8s-deploy \
 --type=NodePort \
 --port=8000 \
---target-port=8080
+--target-port=8080 \
+--dry-run=true --output=yaml
+
+cat << EOF >> svc.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: k8s-deploy
+  name: k8s-deploy
+spec:
+  ports:
+  - port: 8000
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: k8s-deploy
+  type: NodePort
+EOF
+
+kubectl create --filename=svc.yaml
 
 export SVC_IP=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="k8s-deploy")].spec.clusterIP}') && \
 echo SVC_IP: $SVC_IP [$(kubectl describe svc/k8s-deploy | grep -w IP:)]
@@ -106,7 +127,34 @@ curl --silent $POD_IP:$POD_PORT
 ###### Step 4 - Scale Deployment ######
 
 kubectl scale deploy/k8s-deploy \
---replicas=3 && \
+--replicas=3 \
+--dry-run --output=yaml
+
+cat << EOF >> deploy.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: k8s-deploy
+  name: k8s-deploy
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: k8s-deploy
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: k8s-deploy
+    spec:
+      containers:
+      - image: gcr.io/google-samples/kubernetes-bootcamp:v1
+        name: kubernetes-bootcamp
+        resources: {}
+EOF
+
+kubectl apply --filename=deploy.yaml && \
 kubectl rollout status deploy/k8s-deploy && \
 kubectl describe svc/k8s-deploy
 
@@ -130,7 +178,35 @@ kubectl exec $POD_NAME \
 
 ###### Step 6 - Update Deployment ######
 
-kubectl label deploy/k8s-deploy ver=v1 && \
+kubectl label deploy/k8s-deploy ver=v1 \
+--dry-run=true --output=yaml
+
+cat << EOF >> deploy.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: k8s-deploy
+    ver: v1
+  name: k8s-deploy
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: k8s-deploy
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: k8s-deploy
+    spec:
+      containers:
+      - image: gcr.io/google-samples/kubernetes-bootcamp:v1
+        name: kubernetes-bootcamp
+        resources: {}
+EOF
+
+kubectl apply --filename=deploy.yaml && \
 kubectl rollout status deploy/k8s-deploy && \
 kubectl get deploy/k8s-deploy --show-labels=true
 
@@ -140,7 +216,7 @@ do
   curl --silent $NODE_IP:$NODE_PORT
 done
 
-kubectl set image deploy/k8s-deploy k8s-deploy=jocatalin/kubernetes-bootcamp:v2 && \
+**kubectl set image deploy/k8s-deploy k8s-deploy=jocatalin/kubernetes-bootcamp:v2 && \
 kubectl rollout status deploy/k8s-deploy && \
 kubectl get deploy/k8s-deploy --output=jsonpath='{.spec.template.spec.containers[?(@.name=="kubernetes-bootcamp")].image}'
 
