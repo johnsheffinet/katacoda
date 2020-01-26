@@ -14,7 +14,6 @@ kubectl get cs,no
 ###### Step 1 - Create Namespace & Context ######
 
 kubectl create ns k8s-ns \
---output=yaml && \
 kubectl get ns/k8s-ns
 
 kubectl config set-context k8s-context \
@@ -28,7 +27,6 @@ kubectl config current-context
 ###### Step 2 - Create Deployment ######
 
 kubectl create deploy k8s-deploy \
---output=yaml \
 --image=gcr.io/google-samples/kubernetes-bootcamp:v1 && \
 kubectl rollout status deploy/k8s-deploy && \
 kubectl get deploy/k8s-deploy
@@ -36,7 +34,6 @@ kubectl get deploy/k8s-deploy
 ###### Step 3 - Expose Deployment ######
 
 kubectl expose deploy/k8s-deploy \
---output=yaml \
 --type=NodePort \
 --port=8000 \
 --target-port=8080
@@ -128,7 +125,6 @@ done
 ###### Step 7 - Run Deployment ######
 
 kubectl run k8s-run \
---output=yaml \
 --image=gcr.io/google-samples/kubernetes-bootcamp:v1 \
 --replicas=3 \
 --expose=true \
@@ -151,7 +147,6 @@ done
 ###### Step 8 - Create Job & Cronjob ######
 
 kubectl create job k8s-job \
---output=yaml \
 --image=busybox \
 -- bin/sh -c 'date; echo Hello from Kubernetes cluster' && \
 kubectl wait --for=condition=complete job/k8s-job && \
@@ -159,7 +154,6 @@ kubectl get job/k8s-job && \
 kubectl logs job/k8s-job
 
 kubectl create cronjob k8s-cronjob \
---output=yaml \
 --schedule='*/1 * * * *' \
 --image=busybox \
 -- bin/sh -c 'date; echo Hello from Kubernetes cluster' && \
