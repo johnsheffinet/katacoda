@@ -13,6 +13,213 @@ kubectl get cs,no
 
 ###### Step 1 - Create Namespace & Context ######
 
+kubectl create ns k8s-ns \
+--dry-run=true --output=yaml
+
+cat << EOF >> ns.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: k8s-ns
+spec: {}
+EOF
+
+kubectl create --filename=ns.yaml && \
+kubectl get ns/k8s-ns
+
+kubectl config set-context k8s-context \
+--cluster=minikube \
+--namespace=k8s-ns \
+--user=minikube && \
+kubectl config view && \
+kubectl config use-context k8s-context && \
+kubectl config current-context
+
+###### Step 2 - Create Deployment ######
+
+kubectl create deploy k8s-deploy \
+--image=gcr.io/google-samples/kubernetes-bootcamp:v1 \
+--dry-run=true --output=yaml
+
+cat << EOF >> deploy.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: k8s-deploy
+  name: k8s-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: k8s-deploy
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: k8s-deploy
+    spec:
+      containers:
+      - image: gcr.io/google-samples/kubernetes-bootcamp:v1
+        name: kubernetes-bootcamp
+        resources: {}
+EOF
+
+kubectl create --filename=deploy.yaml && \
+kubectl rollout status deploy/k8s-deploy && \
+kubectl get deploy/k8s-deploy
+
+###### Step 3 - Expose Deployment ######
+
+kubectl expose deploy/k8s-deploy \
+--type=NodePort \
+--port=8000 \
+--target-port=8080
+
+export SVC_IP=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="k8s-deploy")].spec.clusterIP}') && \
+echo SVC_IP: $SVC_IP [$(kubectl describe svc/k8s-deploy | grep -w IP:)]
+
+export SVC_PORT=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="k8s-deploy")].spec.ports[0].port}') && \
+echo SVC_PORT: $SVC_PORT [$(kubectl describe svc/k8s-deploy | grep -w Port:)]
+
+export NODE_IP=$(minikube ip) && \
+echo NODE_IP: $NODE_IP
+
+export NODE_PORT=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="k8s-deploy")].spec.ports[0].nodePort}') && \
+echo NODE_PORT: $NODE_PORT [$(kubectl describe svc/k8s-deploy | grep -w NodePort:)]
+
+export POD_NAME=$(kubectl get po -l=app=k8s-deploy --output=jsonpath='{.items[0].metadata.name}') && \
+echo POD_NAME: $POD_NAME
+
+export POD_IP=$(kubectl get po/$POD_NAME --output=jsonpath='{.status.podIP}') && \
+echo POD_IP: $POD_IP [$(kubectl describe svc/k8s-deploy | grep -w Endpoints:)]
+
+export POD_PORT=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="k8s-deploy")].spec.ports[0].targetPort}') && \
+echo POD_PORT: $POD_PORT [$(kubectl describe svc/k8s-deploy | grep -w TargetPort:)]
+
+curl --silent $NODE_IP:$NODE_PORT
+
+curl --silent $SVC_IP:$SVC_PORT
+
+curl --silent $POD_IP:$POD_PORT
+
+###### Step 4 - Scale Deployment ######
+
+kubectl scale deploy/k8s-deploy \
+--replicas=3 && \
+kubectl rollout status deploy/k8s-deploy && \
+kubectl describe svc/k8s-deploy
+
+for (( i=0; i<3; i++ ))
+do  
+  sleep 5s
+  curl --silent $NODE_IP:$NODE_PORT
+done
+
+###### Step 5 - View Container ######
+
+export CONTAINER_NAME=$(kubectl get po/$POD_NAME --output=jsonpath='{.spec.containers[0].name}') && \
+echo $CONTAINER_NAME
+
+kubectl logs $POD_NAME \
+--container=$CONTAINER_NAME
+
+kubectl exec $POD_NAME \
+--container=$CONTAINER_NAME \
+-- curl --silent localhost:$POD_PORT
+
+###### Step 6 - Update Deployment ######
+
+kubectl label deploy/k8s-deploy ver=v1 && \
+kubectl rollout status deploy/k8s-deploy && \
+kubectl get deploy/k8s-deploy --show-labels=true
+
+for (( i=0; i<3; i++ ))
+do  
+  sleep 5s
+  curl --silent $NODE_IP:$NODE_PORT
+done
+
+kubectl set image deploy/k8s-deploy k8s-deploy=jocatalin/kubernetes-bootcamp:v2 && \
+kubectl rollout status deploy/k8s-deploy && \
+kubectl get deploy/k8s-deploy --output=jsonpath='{.spec.template.spec.containers[?(@.name=="kubernetes-bootcamp")].image}'
+
+for (( i=0; i<3; i++ ))
+do  
+  sleep 5s
+  curl --silent $NODE_IP:$NODE_PORT
+done
+
+kubectl rollout undo deploy/k8s-deploy && \
+kubectl rollout status deploy/k8s-deploy && \
+kubectl get deploy/k8s-deploy --output=jsonpath='{.spec.template.spec.containers[?(@.name=="kubernetes-bootcamp")].image}'
+
+for (( i=0; i<3; i++ ))
+do  
+  sleep 5s
+  curl --silent $NODE_IP:$NODE_PORT
+done
+
+###### Step 7 - Run Deployment ######
+
+kubectl run k8s-run \
+--image=gcr.io/google-samples/kubernetes-bootcamp:v1 \
+--replicas=3 \
+--expose=true \
+--port=8080 \
+--service-overrides='{"apiVersion": "v1", "spec": {"type": "NodePort", "ports": [{"port": 8000, "targetPort": 8080}]}}' && \
+kubectl rollout status deploy/k8s-run && \
+kubectl get po -l=run=k8s-run && \
+kubectl get deploy/k8s-run && \
+kubectl describe svc/k8s-run
+
+export NODE_PORT=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="k8s-run")].spec.ports[0].nodePort}') && \
+echo NODE_PORT: $NODE_PORT [$(kubectl describe svc/k8s-run | grep -w NodePort:)]
+
+for (( i=0; i<3; i++ ))
+do  
+  sleep 5s
+  curl --silent $NODE_IP:$NODE_PORT
+done
+
+###### Step 8 - Create Job & Cronjob ######
+
+kubectl create job k8s-job \
+--image=busybox \
+-- bin/sh -c 'date; echo Hello from Kubernetes cluster' && \
+kubectl wait --for=condition=complete job/k8s-job && \
+kubectl get job/k8s-job && \
+kubectl logs job/k8s-job
+
+kubectl create cronjob k8s-cronjob \
+--schedule='*/1 * * * *' \
+--image=busybox \
+-- bin/sh -c 'date; echo Hello from Kubernetes cluster' && \
+kubectl get cronjob/k8s-cronjob
+
+export POD_NAME=$(kubectl get po --output=jsonpath='{.items[0].metadata.name}') && \
+echo POD_NAME: $POD_NAME
+
+kubectl logs $POD_NAME
+
+###### Step 9 - Clean UP ######
+
+kubectl delete svc/k8s-deploy && \
+kubectl get svc
+
+kubectl delete deploy/k8s-deploy && \
+kubectl get deploy
+
+kubectl config use-context minikube && \
+kubectl config delete-context k8s-context && \
+kubectl config view && \
+kubectl config current-context
+
+kubectl delete ns/k8s-ns && \
+kubectl get ns
+
+###### Step 1 - Create Namespace & Context ######
+
 cat << EOF >> ns.yaml
 apiVersion: v1
 kind: Namespace
