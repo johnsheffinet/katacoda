@@ -102,9 +102,7 @@ spec:
   type: NodePort
 EOF
 
-kubectl apply --filename=svc.yaml && \
-kubectl rollout status deploy/k8s-deploy && \
-kubectl get deploy/k8s-deploy
+kubectl apply --filename=svc.yaml
 
 export SVC_IP=$(kubectl get svc --output=jsonpath='{.items[?(@.metadata.name=="k8s-deploy")].spec.clusterIP}') && \
 echo SVC_IP: $SVC_IP [$(kubectl describe svc/k8s-deploy | grep -w IP:)]
@@ -135,31 +133,13 @@ curl --silent $POD_IP:$POD_PORT
 
 ###### Step 4 - Scale Deployment ######
 
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: k8s-run
-  namespace: k8s-ns
-spec:
-  externalTrafficPolicy: Cluster
-  ports:
-  - nodePort: 30977
-    port: 8000
-    protocol: TCP
-    targetPort: 8080
-  selector:
-    run: k8s-run
-  sessionAffinity: None
-  type: NodePort
----
----
+cat << EOF >> deploy.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    run: k8s-run
-  name: k8s-run
+    app: k8s-deploy
+  name: k8s-deploy
   namespace: k8s-ns
 spec:
   progressDeadlineSeconds: 600
@@ -167,7 +147,7 @@ spec:
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      run: k8s-run
+      app: k8s-deploy
   strategy:
     rollingUpdate:
       maxSurge: 25%
@@ -176,15 +156,12 @@ spec:
   template:
     metadata:
       labels:
-        run: k8s-run
+        app: k8s-deploy
     spec:
       containers:
       - image: gcr.io/google-samples/kubernetes-bootcamp:v1
         imagePullPolicy: IfNotPresent
-        name: k8s-run
-        ports:
-        - containerPort: 8080
-          protocol: TCP
+        name: kubernetes-bootcamp
         resources: {}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
@@ -193,9 +170,9 @@ spec:
       schedulerName: default-scheduler
       securityContext: {}
       terminationGracePeriodSeconds: 30
----
+EOF
 
-
+kubectl apply --filename=deploy.yaml && \
 ###### Step 5 - View Container ######
 ###### Step 6 - Update Deployment ######
 ###### Step 7 - Run Deployment ######
@@ -318,4 +295,65 @@ spec:
   selector:
     app: webapp1
 EOF
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: k8s-run
+  namespace: k8s-ns
+spec:
+  externalTrafficPolicy: Cluster
+  ports:
+  - nodePort: 30977
+    port: 8000
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    run: k8s-run
+  sessionAffinity: None
+  type: NodePort
+---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: k8s-run
+  name: k8s-run
+  namespace: k8s-ns
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 3
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      run: k8s-run
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        run: k8s-run
+    spec:
+      containers:
+      - image: gcr.io/google-samples/kubernetes-bootcamp:v1
+        imagePullPolicy: IfNotPresent
+        name: k8s-run
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+---
+
 
