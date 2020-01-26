@@ -1,6 +1,20 @@
-# Deploy Containers Using YAML
+### Deploy Containers Using YAML ###
 
-# Step 1 - Create Deployment
+###### Step 0 - Create Cluster ######
+
+
+
+###### Step 1 - Create Namespace & Context ######
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: k8s-ns
+spec:
+  finalizers:
+  - kubernetes
+---
 cat << EOF >> deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -23,13 +37,46 @@ spec:
         - containerPort: 80
 EOF
 
-kubectl create -f deployment.yaml
+###### Step 2 - Create Deployment ######
 
-kubectl get deploy
-
-kubectl describe deploy webapp1
-
-# Step 2 - Create Service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: k8s-deploy
+  name: k8s-deploy
+  namespace: k8s-ns
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: k8s-deploy
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: k8s-deploy
+    spec:
+      containers:
+      - image: gcr.io/google-samples/kubernetes-bootcamp:v1
+        imagePullPolicy: IfNotPresent
+        name: kubernetes-bootcamp
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+---
 cat << EOF >> service.yaml
 apiVersion: v1
 kind: Service
@@ -54,7 +101,28 @@ kubectl describe svc webapp1-svc
 
 curl host01:30080
 
-# Step 3 - Scale Deployment
+###### Step 3 - Expose Deployment ######
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: k8s-deploy
+  name: k8s-deploy
+  namespace: k8s-ns
+spec:
+  externalTrafficPolicy: Cluster
+  ports:
+  - nodePort: 30026
+    port: 8000
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: k8s-deploy
+  sessionAffinity: None
+  type: NodePort
+---
 cat << EOF >> deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -84,3 +152,153 @@ kubectl get deploy
 kubectl get po
 
 curl host01:30080
+
+
+###### Step 4 - Scale Deployment ######
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: k8s-run
+  namespace: k8s-ns
+spec:
+  externalTrafficPolicy: Cluster
+  ports:
+  - nodePort: 30977
+    port: 8000
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    run: k8s-run
+  sessionAffinity: None
+  type: NodePort
+---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: k8s-run
+  name: k8s-run
+  namespace: k8s-ns
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 3
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      run: k8s-run
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        run: k8s-run
+    spec:
+      containers:
+      - image: gcr.io/google-samples/kubernetes-bootcamp:v1
+        imagePullPolicy: IfNotPresent
+        name: k8s-run
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+---
+
+
+###### Step 5 - View Container ######
+###### Step 6 - Update Deployment ######
+###### Step 7 - Run Deployment ######
+###### Step 8 - Create Job & Cronjob ######
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    controller-uid: f87fca76-2cda-4f82-b93c-e6685d8b12c7
+    job-name: k8s-job
+  name: k8s-job
+  namespace: k8s-ns
+spec:
+  backoffLimit: 6
+  completions: 1
+  parallelism: 1
+  selector:
+    matchLabels:
+      controller-uid: f87fca76-2cda-4f82-b93c-e6685d8b12c7
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        controller-uid: f87fca76-2cda-4f82-b93c-e6685d8b12c7
+        job-name: k8s-job
+    spec:
+      containers:
+      - command:
+        - bin/sh
+        - -c
+        - date; echo Hello from Kubernetes cluster
+        image: busybox
+        imagePullPolicy: Always
+        name: k8s-job
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Never
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+---
+
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: k8s-cronjob
+  namespace: k8s-nsd-43bc-ad2a-8b0b35a6245f
+spec:
+  concurrencyPolicy: Allow
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      name: k8s-cronjob
+    spec:
+      template:
+        metadata:
+        spec:
+          containers:
+          - command:
+            - bin/sh
+            - -c
+            - date; echo Hello from Kubernetes cluster
+            image: busybox
+            imagePullPolicy: Always
+            name: k8s-cronjob
+            resources: {}
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          dnsPolicy: ClusterFirst
+          restartPolicy: OnFailure
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+  schedule: '*/1 * * * *'
+  successfulJobsHistoryLimit: 3
+---
+
+
+###### Step 9 - Delete Service, Deploy, Namespace & Context ######
+
