@@ -2,11 +2,18 @@
 
 ###### Step 0 - Create Cluster ######
 
+minikube version && \
+minikube start --wait=true && \
+minikube status
 
+kubectl version --short && \
+kubectl wait --for=condition=Ready no/minikube && \
+kubectl cluster-info && \
+kubectl get cs,no
 
 ###### Step 1 - Create Namespace & Context ######
 
----
+cat << EOF >> ns.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -14,8 +21,14 @@ metadata:
 spec:
   finalizers:
   - kubernetes
----
-cat << EOF >> deployment.yaml
+EOF
+
+kubectl apply --filename ns.yaml && \
+kubectl get ns/k8s-ns
+
+
+###### Step 2 - Create Deployment ######
+cat << EOF >> deploy.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -36,8 +49,6 @@ spec:
         ports:
         - containerPort: 80
 EOF
-
-###### Step 2 - Create Deployment ######
 
 ---
 apiVersion: apps/v1
