@@ -6,8 +6,8 @@ minikube version && \
 minikube start --wait=true && \
 minikube status
 
-kubectl version --short && \
-kubectl wait --for=condition=Ready no/minikube && \
+kubectl version --short=true && \
+kubectl wait --for=condition=ready no/minikube && \
 kubectl cluster-info && \
 kubectl get cs,no
 
