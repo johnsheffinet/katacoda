@@ -3,18 +3,17 @@
 ###### Step 0 - Create Cluster ######
 
 minikube version && \
-minikube start --wait=true && \
+minikube start --wait && \
 minikube status
 
-kubectl version --short=true && \
+kubectl version --short && \
 kubectl wait --for=condition=ready no/minikube && \
 kubectl cluster-info && \
 kubectl get cs,no
 
 ###### Step 1 - Create Namespace & Context ######
 
-kubectl create ns k8s-ns \
---dry-run=true --output=yaml
+kubectl create ns k8s-ns --dry-run --output=yaml
 
 cat << EOF >> ns.yaml
 apiVersion: v1
@@ -27,10 +26,7 @@ EOF
 kubectl create --filename=ns.yaml && \
 kubectl get ns/k8s-ns
 
-kubectl config set-context k8s-context \
---cluster=minikube \
---namespace=k8s-ns \
---user=minikube && \
+kubectl config set-context k8s-context --cluster=minikube --namespace=k8s-ns --user=minikube && \
 kubectl config view && \
 kubectl config use-context k8s-context && \
 kubectl config current-context
@@ -540,6 +536,14 @@ spec:
 
 
 ###### Step 9 - Delete Service, Deploy, Namespace & Context ######
+
+kubectl config use-context minikube && \
+kubectl config current-context && \
+kubectl config delete-context k8s-context && \
+kubectl config view
+
+kubectl delete ns/k8s-ns && \
+kubectl get ns
 
 cat << EOF >> deployment.yaml
 apiVersion: apps/v1
