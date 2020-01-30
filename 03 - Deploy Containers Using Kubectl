@@ -3,23 +3,20 @@
 ###### Step 0 - Create Cluster ######
 
 minikube version && \
-minikube start --wait=true && \
+minikube start --wait && \
 minikube status
 
-kubectl version --short=true && \
+kubectl version --short && \
 kubectl wait --for=condition=ready no/minikube && \
 kubectl cluster-info && \
 kubectl get cs,no
 
 ###### Step 1 - Create Namespace & Context ######
 
-kubectl create ns k8s-ns \
+kubectl create ns k8s-ns && \
 kubectl get ns/k8s-ns
 
-kubectl config set-context k8s-context \
---cluster=minikube \
---namespace=k8s-ns \
---user=minikube && \
+kubectl config set-context k8s-context --cluster=minikube --namespace=k8s-ns --user=minikube && \
 kubectl config view && \
 kubectl config use-context k8s-context && \
 kubectl config current-context
@@ -173,9 +170,9 @@ kubectl delete deploy/k8s-deploy && \
 kubectl get deploy
 
 kubectl config use-context minikube && \
+kubectl config current-context && \
 kubectl config delete-context k8s-context && \
-kubectl config view && \
-kubectl config current-context
+kubectl config view
 
 kubectl delete ns/k8s-ns && \
 kubectl get ns
