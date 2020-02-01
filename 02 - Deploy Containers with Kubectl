@@ -4,11 +4,10 @@ minikube version && \
 minikube start --wait && \
 minikube status
 
-minikube stop && \
-minikube status
-
-minikube delete && \
-minikube status
+kubectl version --short && \
+kubectl wait --for=condition=ready no/minikube && \
+kubectl cluster-info && \
+kubectl get cs,no
 
 # Step 1 - Create Namespace & Context
 # Step 2 - Create Deployment
@@ -19,3 +18,10 @@ minikube status
 # Step 7 - Run Deployment
 # Step 8 - Create Job & Cronjob
 # Step 9 - Clean Up
+
+
+minikube stop && \
+minikube status
+
+minikube delete && \
+minikube status
