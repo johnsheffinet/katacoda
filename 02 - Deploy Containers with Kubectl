@@ -1,5 +1,15 @@
 # 02 - Deploy Containers with Kubectl
 # Step 0 - Create Cluster
+minikube version && \
+minikube start --wait && \
+minikube status
+
+minikube stop && \
+minikube status
+
+minikube delete && \
+minikube status
+
 # Step 1 - Create Namespace & Context
 # Step 2 - Create Deployment
 # Step 3 - Expose Deployment
