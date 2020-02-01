@@ -10,6 +10,14 @@ kubectl cluster-info && \
 kubectl get cs,no
 
 # Step 1 - Create Namespace & Context
+kubectl create ns k8s-ns && \
+kubectl get ns/k8s-ns
+
+kubectl config set-context k8s-context --cluster=minikube --namespace=k8s-ns --user=minikube && \
+kubectl config view && \
+kubectl config use-context k8s-context && \
+kubectl config current-context
+
 # Step 2 - Create Deployment
 # Step 3 - Expose Deployment
 # Step 4 - Scale Deployment
@@ -18,7 +26,13 @@ kubectl get cs,no
 # Step 7 - Run Deployment
 # Step 8 - Create Job & Cronjob
 # Step 9 - Clean Up
+kubectl config use-context minikube && \
+kubectl config current-context && \
+kubectl config delete-context k8s-context && \
+kubectl config view
 
+kubectl delete ns/k8s-ns && \
+kubectl get ns
 
 minikube stop && \
 minikube status
