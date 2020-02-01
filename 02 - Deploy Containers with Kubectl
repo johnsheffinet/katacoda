@@ -1,0 +1,11 @@
+# 02 - Deploy Containers with Kubectl
+# Step 0 - Create Cluster
+# Step 1 - Create Namespace & Context
+# Step 2 - Create Deployment
+# Step 3 - Expose Deployment
+# Step 4 - Scale Deployment
+# Step 5 - Access Container
+# Step 6 - Update Deployment
+# Step 7 - Run Deployment
+# Step 8 - Create Job & Cronjob
+# Step 9 - Clean Up
