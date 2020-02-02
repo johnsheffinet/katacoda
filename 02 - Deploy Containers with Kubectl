@@ -13,10 +13,31 @@ kubectl get cs,no
 kubectl create ns k8s-ns && \
 kubectl get ns/k8s-ns
 
+kubectl delete ns/k8s-ns && \
+kubectl get ns
+
+kubectl create ns k8s-ns --dry-run --output=yaml
+
+cat << EOF >> k8s-ns.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: k8s-ns
+spec: {}
+EOF
+
+kubectl create --filename=k8s-ns.yaml && \
+kubectl get ns/k8s-ns
+
 kubectl config set-context k8s-context --cluster=minikube --namespace=k8s-ns --user=minikube && \
 kubectl config view && \
 kubectl config use-context k8s-context && \
 kubectl config current-context
+
+kubectl config use-context minikube && \
+kubectl config current-context && \
+kubectl config delete-context k8s-context && \
+kubectl config view
 
 # Step 2 - Create Deployment
 # Step 3 - Expose Deployment
