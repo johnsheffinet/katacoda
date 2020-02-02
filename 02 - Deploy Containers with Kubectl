@@ -34,10 +34,22 @@ kubectl config view && \
 kubectl config use-context k8s-context && \
 kubectl config current-context
 
+kubectl config view
+
 kubectl config use-context minikube && \
 kubectl config current-context && \
 kubectl config delete-context k8s-context && \
 kubectl config view
+
+export KUBECONFIG=$HOME/.kube/config && \
+echo $KUBECONFIG
+
+cat << EOF >> $KUBECONFIG
+
+EOF
+
+kubectl config view && \
+kubectl config current-context
 
 # Step 2 - Create Deployment
 # Step 3 - Expose Deployment
