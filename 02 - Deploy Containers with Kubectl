@@ -52,6 +52,23 @@ kubectl config view && \
 kubectl config current-context
 
 # Step 2 - Create Deployment
+kubectl create deploy k8s-deploy --image=gcr.io/google-samples/kubernetes-bootcamp:v1 && \
+kubectl rollout status deploy/k8s-deploy && \
+kubectl get deploy/k8s-deploy
+
+kubectl delete deploy/k8s-deploy && \
+kubectl get deploy
+
+kubectl create deploy k8s-deploy --image=gcr.io/google-samples/kubernetes-bootcamp:v1 --dry-run --output=yaml
+
+cat << EOF >> k8s-deploy.yaml
+
+EOF
+
+kubectl create --filename=k8s-deploy.yaml && \
+kubectl rollout status deploy/k8s-deploy && \
+kubectl get deploy/k8s-deploy
+
 # Step 3 - Expose Deployment
 # Step 4 - Scale Deployment
 # Step 5 - Access Container
@@ -59,6 +76,9 @@ kubectl config current-context
 # Step 7 - Run Deployment
 # Step 8 - Create Job & Cronjob
 # Step 9 - Clean Up
+kubectl delete deploy/k8s-deploy && \
+kubectl get deploy
+
 kubectl config use-context minikube && \
 kubectl config current-context && \
 kubectl config delete-context k8s-context && \
