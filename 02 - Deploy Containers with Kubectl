@@ -93,6 +93,10 @@ kubectl rollout status deploy/k8s-deploy && \
 kubectl get deploy/k8s-deploy
 
 # Step 3 - Expose Deployment
+kubectl expose deploy/k8s-deploy --type=NodePort --port=8081 --target-port-8080
+
+kubectl expose deploy/k8s-deploy --type=NodePort --port=8081 --target-port-8080 --dry-run --output=yaml
+
 # Step 4 - Scale Deployment
 # Step 5 - Access Container
 # Step 6 - Update Deployment
