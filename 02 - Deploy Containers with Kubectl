@@ -85,7 +85,29 @@ kubectl get deploy
 kubectl create deploy k8s-deploy --image=gcr.io/google-samples/kubernetes-bootcamp:v1 --dry-run --output=yaml
 
 cat << EOF >> k8s-deploy.yaml
-
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: k8s-deploy
+  name: k8s-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: k8s-deploy
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: k8s-deploy
+    spec:
+      containers:
+      - image: gcr.io/google-samples/kubernetes-bootcamp:v1
+        name: kubernetes-bootcamp
+        resources: {}
 EOF
 
 kubectl create --filename=k8s-deploy.yaml && \
