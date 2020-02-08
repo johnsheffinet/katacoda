@@ -1,4 +1,4 @@
-# 02 - Deploy Containers with Kubectl
+# 04 - Deploy Containers Using YAML
 # Step 0 - Create Cluster
 minikube version && \
 minikube start --wait && \
@@ -93,6 +93,11 @@ kubectl create --filename=k8s-deploy.yaml && \
 kubectl rollout status deploy/k8s-deploy && \
 kubectl get deploy/k8s-deploy
 
+# Step 4 - Scale Deployment
+# Step 5 - Access Container
+# Step 6 - Update Deployment
+# Step 7 - Run Deployment
+# Step 8 - Create Job & Cronjob
 # Step 9 - Clean Up
 kubectl delete deploy/k8s-deploy && \
 kubectl get deploy
