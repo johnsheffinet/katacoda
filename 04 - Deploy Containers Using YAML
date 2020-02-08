@@ -1,7 +1,5 @@
-### Deploy Containers Using YAML ###
-
-###### Step 0 - Create Cluster ######
-
+# 02 - Deploy Containers with Kubectl
+# Step 0 - Create Cluster
 minikube version && \
 minikube start --wait && \
 minikube status
@@ -11,11 +9,10 @@ kubectl wait --for=condition=ready no/minikube && \
 kubectl cluster-info && \
 kubectl get cs,no
 
-###### Step 1 - Create Namespace & Context ######
+# Step 1 - Create Namespace & Context
+# kubectl create ns k8s-ns --dry-run --output=yaml
 
-kubectl create ns k8s-ns --dry-run --output=yaml
-
-cat << EOF >> ns.yaml
+cat << EOF >> k8s-ns.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -23,30 +20,54 @@ metadata:
 spec: {}
 EOF
 
-kubectl create --filename=ns.yaml && \
+kubectl create --filename=k8s-ns.yaml && \
 kubectl get ns/k8s-ns
 
-kubectl config set-context k8s-context --cluster=minikube --namespace=k8s-ns --user=minikube && \
+# kubectl config set-context k8s-context --cluster=minikube --namespace=k8s-ns --user=minikube && \
+# kubectl config use-context k8s-context && \
+# kubectl config view
+
+export KUBECONFIG=$HOME/.kube/config && \
+echo $KUBECONFIG
+
+cat << EOF >> $KUBECONFIG
+apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    certificate-authority: /root/.minikube/ca.crt
+    server: https://172.17.0.33:8443
+  name: minikube
+contexts:
+- context:
+    cluster: minikube
+    namespace: k8s-ns
+    user: minikube
+  name: k8s-context
+- context:
+    cluster: minikube
+    user: minikube
+  name: minikube
+current-context: k8s-context
+preferences: {}
+users:
+- name: minikube
+  user:
+    client-certificate: /root/.minikube/client.crt
+    client-key: /root/.minikube/client.key
+EOF
+
 kubectl config view && \
-kubectl config use-context k8s-context && \
 kubectl config current-context
 
-###### Step 2 - Create Deployment ######
+# Step 2 - Create Deployment
+# kubectl create deploy k8s-deploy --image=gcr.io/google-samples/kubernetes-bootcamp:v1 --dry-run --output=yaml
 
-###### Step 2 - Create Deployment ######
-
-kubectl create deploy k8s-deploy --image=gcr.io/google-samples/kubernetes-bootcamp:v1 && \
-kubectl rollout status deploy/k8s-deploy && \
-kubectl get deploy/k8s-deploy
-
-kubectl create deploy k8s-deploy \
---image=gcr.io/google-samples/kubernetes-bootcamp:v1 \
---dry-run=true --output=yaml
-
-cat << EOF >> deploy.yaml
+cat << EOF >> k8s-deploy.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  creationTimestamp: null
   labels:
     app: k8s-deploy
   name: k8s-deploy
@@ -58,6 +79,7 @@ spec:
   strategy: {}
   template:
     metadata:
+      creationTimestamp: null
       labels:
         app: k8s-deploy
     spec:
@@ -67,9 +89,27 @@ spec:
         resources: {}
 EOF
 
-kubectl create --filename=deploy.yaml && \
+kubectl create --filename=k8s-deploy.yaml && \
 kubectl rollout status deploy/k8s-deploy && \
 kubectl get deploy/k8s-deploy
+
+# Step 9 - Clean Up
+kubectl delete deploy/k8s-deploy && \
+kubectl get deploy
+
+kubectl config use-context minikube && \
+kubectl config current-context && \
+kubectl config delete-context k8s-context && \
+kubectl config view
+
+kubectl delete ns/k8s-ns && \
+kubectl get ns
+
+minikube stop && \
+minikube status
+
+minikube delete && \
+minikube status
 
 ###### Step 3 - Expose Deployment ######
 
