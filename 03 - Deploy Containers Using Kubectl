@@ -63,41 +63,11 @@ kubectl create deploy k8s-deploy --image=gcr.io/google-samples/kubernetes-bootca
 kubectl rollout status deploy/k8s-deploy && \
 kubectl get deploy/k8s-deploy
 
-kubectl delete deploy/k8s-deploy && \
-kubectl get deploy
-
-kubectl create deploy k8s-deploy --image=gcr.io/google-samples/kubernetes-bootcamp:v1 --dry-run --output=yaml
-
-cat << EOF >> k8s-deploy.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  creationTimestamp: null
-  labels:
-    app: k8s-deploy
-  name: k8s-deploy
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: k8s-deploy
-  strategy: {}
-  template:
-    metadata:
-      creationTimestamp: null
-      labels:
-        app: k8s-deploy
-    spec:
-      containers:
-      - image: gcr.io/google-samples/kubernetes-bootcamp:v1
-        name: kubernetes-bootcamp
-        resources: {}
-EOF
-
-kubectl create --filename=k8s-deploy.yaml && \
-kubectl rollout status deploy/k8s-deploy && \
-kubectl get deploy/k8s-deploy
-
+# Step 4 - Scale Deployment
+# Step 5 - Access Container
+# Step 6 - Update Deployment
+# Step 7 - Run Deployment
+# Step 8 - Create Job & Cronjob
 # Step 9 - Clean Up
 kubectl delete deploy/k8s-deploy && \
 kubectl get deploy
