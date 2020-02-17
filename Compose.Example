@@ -1,0 +1,194 @@
+version: "3.7" # dockerd v17.06.0+
+
+x-REQUIRED_LABELS: &REQUIRED_LABELS
+  - "com.docker.ucp.access.label=${COLLECTION_PATH?err}"
+  - "com.premierinc.owner.name=${PREMIER_OWNER_NAME?err}"
+  - "com.premierinc.owner.email=${PREMIER_OWNER_EMAIL?err}"
+
+## https://docs.docker.com/compose/compose-file/#network-configuration-reference
+networks:
+  traefik-net:
+    ## https://docs.docker.com/compose/compose-file/#external-1
+    external:
+      name: "${TRAEFIK_NETWORK_NAME}"
+  overlay-net:
+    ## https://docs.docker.com/compose/compose-file/#driver-1
+    driver: "overlay"
+    ## https://docs.docker.com/compose/compose-file/#driver_opts-1
+    driver_opts:
+      encrypted: "true"
+    ## https://docs.docker.com/compose/compose-file/#attachable
+    attachable: true
+    ## https://docs.docker.com/compose/compose-file/#labels-4
+    labels: *REQUIRED_LABELS
+
+## https://docs.docker.com/compose/compose-file/#volume-configuration-reference
+volumes:
+  nas-vol:
+    ## https://docs.docker.com/compose/compose-file/#driver
+    driver: local
+    ## https://docs.docker.com/compose/compose-file/#driver_opts
+    driver_opts:
+      device: ":/${NFS_HOST_PATH}"
+      o: "addr=${NFS_HOST_NAME},nolock,soft,rw"
+      type: "nfs"
+    ## https://docs.docker.com/compose/compose-file/#labels-3
+    labels: *REQUIRED_LABELS
+  san-vol:
+    ## https://docs.docker.com/compose/compose-file/#labels-3
+    labels: *REQUIRED_LABELS
+
+services:
+  main-svc:
+    deploy:
+      ## https://docs.docker.com/compose/compose-file/#endpoint_mode
+      endpoint_mode: "vip"
+      ## https://docs.docker.com/compose/compose-file/#labels-1
+      labels:
+        - "com.docker.ucp.access.label=${COLLECTION_PATH?err}"
+        - "com.premierinc.owner.name=${PREMIER_OWNER_NAME?err}"
+        - "com.premierinc.owner.email=${PREMIER_OWNER_EMAIL?err}"
+        - "traefik.docker.network=${TRAEFIK_NETWORK_NAME?err}"
+        - "traefik.frontend.rule=Host:${TRAEFIK_NETWORK_URL?err}"
+        - "traefik.port=8080"
+        - "traefik.protocol=http"
+        - "traefik.enable=true"
+      ## https://docs.docker.com/compose/compose-file/#mode
+      mode: "replicated"
+      ## https://docs.docker.com/compose/compose-file/#placement
+      placement:
+        constraints:
+          - "node.role == worker"
+          - "node.labels.cockroach != true"
+          - "node.labels.system != true"
+      ## https://docs.docker.com/compose/compose-file/#replicas
+      replicas: 2
+      ## https://docs.docker.com/compose/compose-file/#resources
+      resources:
+        limits:
+          cpus: "2"
+          memory: "2048m"
+        reservations:
+          cpus: "1"
+          memory: "4m"
+      ## https://docs.docker.com/compose/compose-file/#restart_policy
+      restart_policy:
+        condition: "on-failure"
+        delay: "5s"
+        max_attempts: 5
+        window: "30s"
+      ## https://docs.docker.com/compose/compose-file/#update_config
+      update_config:
+        delay: "0s"
+        failure_action: "rollback"
+        max_failure_ratio: 0
+        monitor: "5s"
+        order: "start-first"
+        parallelism: 1
+    ## https://docs.docker.com/compose/compose-file/#environment
+    environment:
+      - "WEBANNO_DB_DIALECT=org.hibernate.dialect.MySQL5InnoDBDialect"
+      - "WEBANNO_DB_DRIVER=com.mysql.jdbc.Driver"
+      - "WEBANNO_DB_PASSWORD=webanno"
+      - "WEBANNO_DB_URL=jdbc:mysql://webanno-db:3306/webanno?useSSL=false&useUnicode=true&characterEncoding=UTF-8"
+      - "WEBANNO_DB_USERNAME=webanno"
+    ## https://docs.docker.com/compose/compose-file/#healthcheck
+    healthcheck:
+      interval: "1m"
+      retries: 5
+      start_period: "0s"
+      test: ["NONE"]
+      timeout: "10s"
+    ## https://docs.docker.com/compose/compose-file/#image
+    image: "dtr.premierinc.com/webanno_org/webanno:3.4.5"
+    ## https://docs.docker.com/compose/compose-file/#logging
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "10"
+        max-size: "200k"
+    ## https://docs.docker.com/compose/compose-file/#ports
+    ports:
+      - "50100:8080"
+    ## https://docs.docker.com/compose/compose-file/#networks
+    networks: 
+      traefik-net:
+      overlay-net:
+    ## https://docs.docker.com/compose/compose-file/#volumes
+    volumes:
+      - "nas-vol:/export"
+  mysql-svc:
+    deploy:
+      ## https://docs.docker.com/compose/compose-file/#endpoint_mode
+      endpoint_mode: "vip"
+      ## https://docs.docker.com/compose/compose-file/#labels-1
+      labels:
+        - "com.docker.ucp.access.label=${COLLECTION_PATH?err}"
+        - "com.premierinc.owner.name=${PREMIER_OWNER_NAME?err}"
+        - "com.premierinc.owner.email=${PREMIER_OWNER_EMAIL?err}"
+        - "traefik.docker.network=${TRAEFIK_NETWORK_NAME?err}"
+        - "traefik.frontend.rule=Host:${TRAEFIK_NETWORK_URL?err}"
+        - "traefik.port=8080"
+        - "traefik.protocol=http"
+        - "traefik.enable=true"
+      ## https://docs.docker.com/compose/compose-file/#mode
+      mode: "replicated"
+      ## https://docs.docker.com/compose/compose-file/#placement
+      placement:
+        constraints:
+          - "node.role == worker"
+          - "node.hostname == ${SAN_HOST_NAME?err}"
+      ## https://docs.docker.com/compose/compose-file/#replicas
+      replicas: 1
+      ## https://docs.docker.com/compose/compose-file/#resources
+      resources:
+        limits:
+          cpus: "2"
+          memory: "2048m"
+        reservations:
+          cpus: "1"
+          memory: "4m"
+      ## https://docs.docker.com/compose/compose-file/#restart_policy
+      restart_policy:
+        condition: "on-failure"
+        delay: "5s"
+        max_attempts: 5
+        window: "30s"
+      ## https://docs.docker.com/compose/compose-file/#update_config
+      update_config:
+        delay: "0s"
+        failure_action: "rollback"
+        max_failure_ratio: 0
+        monitor: "5s"
+        order: "start-first"
+        parallelism: 1
+    ## https://docs.docker.com/compose/compose-file/#environment
+    environment:
+      - "MYSQL_DATABASE=webanno"
+      - "MYSQL_PASSWORD=webanno"
+      - "MYSQL_PORT=3306"
+      - "MYSQL_RANDOM_ROOT_PASSWORD=yes"
+      - "MYSQL_USER=webanno"
+    ## https://docs.docker.com/compose/compose-file/#healthcheck
+    healthcheck:
+      interval: "1m"
+      retries: 5
+      start_period: "0s"
+      test: ["NONE"]
+      timeout: "10s"
+    ## https://docs.docker.com/compose/compose-file/#image
+    image: "dtr.premierinc.com/webanno_org/mysql:5"
+    ## https://docs.docker.com/compose/compose-file/#logging
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "10"
+        max-size: "200k"
+    ## https://docs.docker.com/compose/compose-file/#networks
+    networks: 
+      overlay-net:
+        aliases: 
+          - "webanno-db"
+    ## https://docs.docker.com/compose/compose-file/#volumes
+    volumes:
+      - "san-vol:/var/lib/mysql:rw"
