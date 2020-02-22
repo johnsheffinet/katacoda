@@ -13,8 +13,10 @@ kubectl get po --namespace=kube-system
 kubectl get svc --namespace=kube-system
 
 # 5. List all the pods showing name and namespace with a json path expression
-kubectl get po --output=jsonpath="{.items[*].metadata.name, .items[*].metadatanamespace}"
-kubectl get po --output=custom-columns="Name:.metadataname,Namespace:.metadata.namespace"
+kubectl get po --all-namespaces --output=jsonpath="{.items[*]['metadata.name','metadata.namespace']}"
+kubectl get pods --all-namespaces -o=jsonpath="{.items[*]['metadata.name', 'metadata.namespace']}"
+kubectl get pods --all-namespaces -o=jsonpath="{.items[*].metadata.name}\n"
+kubectl get po --all-namespaces --output=custom-columns="Name:.metadata.name,Namespace:.metadata.namespace"
 
 6. Create an nginx pod in a default namespace and verify the pod running
 kubectl run k8s-po --image=nginx && \
