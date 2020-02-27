@@ -2,18 +2,23 @@
 
 # 1. List all namespaces in cluster
 kubectl get ns
+# Answer: kubectl get ns
 
 # 2. List all pods in all namespaces
 kubectl get po --all-namespaces
+# Answer: kubectl get po --all-namespaces
 
-# 3. List all  pods in particular namespace
+# 3. List all pods in particular namespace
 kubectl get po --namespace=kube-system
+# Answer: kubectl get po -n kube-system
 
 # 4. List all services in particular namespace
 kubectl get svc --namespace=kube-system
+# Answer: kubectl get svc -n kube-system
 
 # 5. List all pods showing name and namespace with jsonpath expression
-kubectl get po --all-namespaces --output=jsonpath="{.items[*]['metadata.name','metadata.namespace']}"
+kubectl get po --all-namespaces --output=jsonpath="{.items[*]['metadata.name', 'metadata.namespace']}"
+# Answer: kubectl get pods -o=jsonpath="{.items[*]['metadata.name', 'metadata.namespace']}"
 
 # 5.a. List all pods showing name and namespace with custom columns
 kubectl get po --all-namespaces --output=custom-columns="Name:.metadata.name,Namespace:.metadata.namespace"
@@ -22,24 +27,39 @@ kubectl get po --all-namespaces --output=custom-columns="Name:.metadata.name,Nam
 kubectl run nginx --image=nginx --generator=run-pod/v1 && \
 kubectl wait --for=condition=ready po/nginx && \
 kubectl get po/nginx
+# Answer: kubectl run nginx --image=nginx --restart=Never && \
+kubectl get po
 
 # 7. Create same nginx pod with yaml file
 kubectl run nginx --image=nginx --generator=run-pod/v1 --dry-run --output=yaml > nginx.yaml && \
 kubectl create --filename=nginx.yaml && \
 kubectl wait --for=condition=ready po/nginx && \
 kubectl get po/nginx
+# Answer: kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > nginx.yaml && \
+kubectl create -f nginx.yaml
 
 # 8. Output yaml file of pod just created
 kubectl get po/nginx --output=yaml
+# Answer: kubectl get po nginx -o yaml
 
 # 9. Output yaml file of pod just created without the cluster-specific information
 kubectl get po/nginx --output=yaml --export
+# Answer: kubectl get po nginx -o yaml --export
 
-10. Get all details of pod just created
+# 10. Get all details of pod just created
 kubectl describe po/nginx
+# Answer: kubectl describe po nginx
+
+# 10.a. Get all details of just created with file
+kubectl describe --filename=nginx.yaml
 
 # 11. Delete pod just created
 kubectl delete po/nginx
+# Answer: kubectl delete po nginx
+
+# 11.a. Delete pod just created with file
+kubectl delete --filename=nginx.yaml
+# Answer: kubectl delete -f nginx.yaml
 
 # 12. Delete the pod you just created without any delay (force delete)
 
