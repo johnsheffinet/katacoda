@@ -54,14 +54,19 @@ kubectl describe po/nginx
 kubectl describe --filename=nginx.yaml
 
 # 11. Delete pod just created
-kubectl delete po/nginx
+kubectl delete po/nginx && \
+kubectl get po
 # Answer: kubectl delete po nginx
 
 # 11.a. Delete pod just created with file
-kubectl delete --filename=nginx.yaml
+kubectl delete --filename=nginx.yaml && \
+kubectl get po
 # Answer: kubectl delete -f nginx.yaml
 
-# 12. Delete the pod you just created without any delay (force delete)
+# 12. Delete pod just created without waiting
+kubectl delete po/nginx --grace-period=0 --force && \
+kubectl get po
+# Answer: kubectl delete po nginx --grace-period=0 --force
 
 13. Create the nginx pod with version 1.17.4 and expose it on port 80
 
