@@ -50,7 +50,7 @@ kubectl get po/nginx --output=yaml --export
 kubectl describe po/nginx
 # Answer: kubectl describe po nginx
 
-# 10.a. Get all details of just created with file
+# 10.a. Get all details of pod just created with file
 kubectl describe --filename=nginx.yaml
 
 # 11. Delete pod just created
@@ -68,12 +68,13 @@ kubectl delete po/nginx --grace-period=0 --force && \
 kubectl get po
 # Answer: kubectl delete po nginx --grace-period=0 --force
 
-13. Create the nginx pod with version 1.17.4 and expose it on port 80
+# 13. Create nginx pod with version 1.17.4 and expose it on port 80
 kubectl run nginx --image=nginx:1.17.4 --generator=run-pod/v1 --port=80 && \
 kubectl wait --for=condition=ready po/nginx && \
 kubectl get po/nginx
 # Answer: kubectl run nginx --image=nginx:1.17.4 --restart=Never --port=80
 
+# 13.a. Verify pod just created is responding 
 export POD_IP=$(kubectl get po/nginx --output=jsonpath='{.status.podIPs[0].ip}') && \
 echo $POD_IP
 
@@ -82,42 +83,44 @@ echo $POD_PORT
 
 curl --silent $POD_IP:$POD_PORT
 
-14. Change the Image version to 1.15-alpine for the pod you just created and verify the image version is updated
+# 14. Change image in pod just created to 1.15-alpine and verify image version is updated
 kubectl set image po/nginx nginx=1.15-alpine && \
 kubectl wait --for=condition=ready po/nginx && \
-kubectl get po/nginx --output=jsonpath='{.spec.containers[0].image}{"\n"}'
+kubectl get po/nginx --output=jsonpath='{"Image: "}{.spec.containers[0].image}{"\n"}'
 # Answer: kubectl set image pod/nginx nginx=nginx:1.15-alpine && \
 kubectl describe po nginx
 
-15. Change the Image version back to 1.17.1 for the pod you just updated and observe the changes
+kubectl patch po/nginx nginx=1.15-alpine
+
+# 15. Change image in pod just created to nginx:1.17.1 and observe changes
 kubectl set image po/nginx nginx=nginx:1.17.1 && \
 kubectl get po/nginx --watch
 
-16. Check the Image version without the describe command
+16. Check image without describe command
 
-17. Create the nginx pod and execute the simple shell on the pod
+17. Create nginx pod and execute simple shell
 
-18. Get the IP Address of the pod you just created
+18. Get IP address of pod just created
 
-19. Create a busybox pod and run command ls while creating it and check the logs
+19. Create busybox pod and run ls command while creating it and check the logs
 
-20. If pod crashed check the previous logs of the pod
+20. If pod crashed, check the previous logs of pod
 
-21. Create a busybox pod with command sleep 3600
+21. Create busybox pod with sleep 3600 command
 
-22. Check the connection of the nginx pod from the busybox pod
+22. Check connection of nginx pod from busybox pod
 
-23. Create a busybox pod and echo message ‘How are you’ and delete it manually
+23. Create busybox pod with echo command, ‘How are you’, and delete pod manually
 
-24. Create a busybox pod and echo message ‘How are you’ and have it deleted immediately
+24. Create busybox pod with echo command, ‘How are you’, and delete pod immediately
 
-25. Create an nginx pod and list the pod with different levels of verbosity
+25. Create nginx pod with different levels of verbosity
 
-26. List the nginx pod with custom columns POD_NAME and POD_STATUS
+26. Show nginx pod with custom columns POD_NAME and POD_STATUS
 
-27. List all the pods sorted by name
+27. List all pods sorted by name
 
-28. List all the pods sorted by created timestamp
+28. List all pods sorted by created timestamp
 
 echo ===> Multi-Container Pods (10%)
 echo ===> Pod Design (20%)
