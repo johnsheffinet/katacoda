@@ -16,12 +16,9 @@ kubectl get po --namespace=kube-system
 kubectl get svc --namespace=kube-system
 # Answer: kubectl get svc -n kube-system
 
-# 5. List all pods showing name and namespace with jsonpath expression
-kubectl get po --all-namespaces --output=jsonpath="{.items[*]['metadata.name', 'metadata.namespace']}"
+# 5. List all pods with jsonpath showing name and namespace
+kubectl get po --all-namespaces --output=jsonpath='{.items[*]["metadata.name", "metadata.namespace"]}'
 # Answer: kubectl get pods -o=jsonpath="{.items[*]['metadata.name', 'metadata.namespace']}"
-
-# 5.a. List all pods showing name and namespace with custom columns
-kubectl get po --all-namespaces --output=custom-columns="Name:.metadata.name,Namespace:.metadata.namespace"
 
 # 6. Create nginx pod in default namespace and verify pod is running
 kubectl run nginx --image=nginx --generator=run-pod/v1 && \
@@ -30,7 +27,13 @@ kubectl get po/nginx
 # Answer: kubectl run nginx --image=nginx --restart=Never && \
 kubectl get po
 
-# 7. Create same nginx pod with yaml file
+# 6.a. Create nginx deployment in default namespace and verify deployment is running
+kubectl create deploy nginx --image=nginx && \
+kubectl rollout status deploy/nginx && \
+kubectl get deploy/nginx && \
+kubectl get po -l app=nginx
+
+# 7. Create nginx pod with yaml file
 kubectl run nginx --image=nginx --generator=run-pod/v1 --dry-run --output=yaml > nginx.yaml && \
 kubectl create --filename=nginx.yaml && \
 kubectl wait --for=condition=ready po/nginx && \
@@ -38,32 +41,32 @@ kubectl get po/nginx
 # Answer: kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > nginx.yaml && \
 kubectl create -f nginx.yaml
 
-# 8. Output yaml file of pod just created
+# 8. Show yaml file of nginx pod
 kubectl get po/nginx --output=yaml
 # Answer: kubectl get po nginx -o yaml
 
-# 9. Output yaml file of pod just created without the cluster-specific information
+# 9. Show yaml file of nginx pod without cluster-specific information
 kubectl get po/nginx --output=yaml --export
 # Answer: kubectl get po nginx -o yaml --export
 
-# 10. Get all details of pod just created
+# 10. Show details of nginx pod
 kubectl describe po/nginx
 # Answer: kubectl describe po nginx
 
-# 10.a. Get all details of pod just created with file
+# 10.a. Show details of nginx pod with file
 kubectl describe --filename=nginx.yaml
 
-# 11. Delete pod just created
+# 11. Delete nginx pod
 kubectl delete po/nginx && \
 kubectl get po
 # Answer: kubectl delete po nginx
 
-# 11.a. Delete pod just created with file
+# 11.a. Delete nginx pod with file
 kubectl delete --filename=nginx.yaml && \
 kubectl get po
 # Answer: kubectl delete -f nginx.yaml
 
-# 12. Delete pod just created without waiting
+# 12. Delete nginx pod without waiting
 kubectl delete po/nginx --grace-period=0 --force && \
 kubectl get po
 # Answer: kubectl delete po nginx --grace-period=0 --force
@@ -74,7 +77,7 @@ kubectl wait --for=condition=ready po/nginx && \
 kubectl get po/nginx
 # Answer: kubectl run nginx --image=nginx:1.17.4 --restart=Never --port=80
 
-# 13.a. Verify pod just created is responding 
+# 13.a. Verify nginx pod is responding 
 export POD_IP=$(kubectl get po/nginx --output=jsonpath='{.status.podIPs[0].ip}') && \
 echo $POD_IP
 
@@ -82,6 +85,21 @@ export POD_PORT=$(kubectl get po/nginx --output=jsonpath='{.spec.containers[0].p
 echo $POD_PORT
 
 curl --silent $POD_IP:$POD_PORT
+
+# 13.b. Create nginx deployment with version 1.17.4 and expose it on port 80
+kubectl create deploy nginx --image=nginx:1.17.4 && \
+kubectl rollout status deploy/nginx && \
+kubectl expose deploy/nginx --type=NodePort --port=80 && \
+kubectl get svc/nginx
+
+#13.c Verify nginx deployment is responding
+export NODE_IP=$(kubectl get svc --output=jsonpath='{.items[?@.metadata.name=="nginx"].spec.clusterIP}')
+echo $NODE_IP <$(kubectl describe svc/nginx | grep IP:)>
+
+export NODE_PORT=$(kubectl get svc --output=jsonpath='{.items[?@.metadata.name=="nginx"].spec.ports[0].nodePort}')
+echo $NODE_PORT <$(kubectl describe svc/nginx | grep NodePort:)>
+
+curl --silent $NODE_IP:$NODE_PORT
 
 # 14. Change image in pod just created to 1.15-alpine and verify image version is updated
 kubectl set image po/nginx nginx=1.15-alpine && \
