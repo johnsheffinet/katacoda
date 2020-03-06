@@ -101,24 +101,23 @@ echo $NODE_PORT <$(kubectl describe svc/nginx | grep NodePort:)>
 
 curl --silent $NODE_IP:$NODE_PORT
 
-# 14. Change image in pod just created to 1.15-alpine and verify image version is updated
+# 14. Change nginx pod to 1.15-alpine image and check image is updated
 kubectl set image po/nginx nginx=1.15-alpine && \
 kubectl wait --for=condition=ready po/nginx && \
-kubectl get po/nginx --output=jsonpath='{"Image: "}{.spec.containers[0].image}{"\n"}'
+kubectl get po/nginx --output=jsonpath='{Image: "}{.spec.containers[?(@.name=="nginx"].image}{"\n"}'
 # Answer: kubectl set image pod/nginx nginx=nginx:1.15-alpine && \
 kubectl describe po nginx
 
-kubectl patch po/nginx nginx=1.15-alpine
-
-# 15. Change image in pod just created to nginx:1.17.1 and observe changes
-kubectl set image po/nginx nginx=nginx:1.17.1 && \
+# 15. Change nginx pod to nginx:17.1.1 image and observe changes
+kubectl patch po/nginx --patch='{"spec":{"containers":[{"name":"nginx","image":"1.15-alpine"}]}}' && \
 kubectl get po/nginx --watch
 
-16. Check image without describe command
+# 16. Check image without describe command
+kubectl get po/nginx --output=jsonpath='{"Image: "}{.spec.containers[?(@.name=="nginx"].image}{"\n"}'
 
-17. Create nginx pod and execute simple shell
-
-18. Get IP address of pod just created
+# 17. Create nginx pod and execute simple shell
+kubectl exec po/nginx --container=nginx /bin/bash
+18. Get IP address of nginx pod
 
 19. Create busybox pod and run ls command while creating it and check the logs
 
