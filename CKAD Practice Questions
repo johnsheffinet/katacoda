@@ -116,18 +116,37 @@ kubectl get po/nginx --watch
 kubectl get po/nginx --output=jsonpath='{"Image: "}{.spec.containers[?(@.name=="nginx"].image}{"\n"}'
 
 # 17. Create nginx pod and execute simple shell
-kubectl exec po/nginx --container=nginx /bin/bash
-18. Get IP address of nginx pod
+kubectl run nginx --generator=run-pod/v1 --image=nginx -- sh
 
-19. Create busybox pod and run ls command while creating it and check the logs
+# 18. Show IP address of nginx pod
+kubectl get po/nginx --output=jsonpath='{}'
 
-20. If pod crashed, check the previous logs of pod
+# 19. Create busybox pod and execute ls command and check logs
+kubectl run busybox --generator=run-pod/v1 --image=busybox --interactive --tty -- ls && \
+kubectl wait --for=condition=ready po/busybox && \
+kubectl logs po/busybox
 
-21. Create busybox pod with sleep 3600 command
+# 20. Restart busybox pod and check previous logs
+kubectl restart po/busybox && \
+kubectl wait --for=condition=ready po/busybox && \
+kubectl logs po/busybox --previous
 
-22. Check connection of nginx pod from busybox pod
+# 21. Create busybox pod and execute sleep 3600 command
+kubectl run busybox --generator=run-pod/v1 --image=busybox -- sleep 3600 && \
+kubectl wait --for=condition=ready po/busybox
 
-23. Create busybox pod with echo command, ‘How are you’, and delete pod manually
+# 22. Check connection from busybox pod to nginx pod
+export POD_IP=$(kubectl get po/nginx --output=jsonpath='{}') && \
+echo $POD_IP
+
+export POD_PORT=$(kubectl get po/nginx --output=jsonpath='{}') && \
+echo $POD_PORT
+
+kubectl exec po/busybox -- curl $POD_IP:$POD_PORT
+
+# 23. Create busybox pod and execute echo command, ‘How are you’, and delete pod manually
+kubectl run busybox --generator=run-pod/v1 --image=busybox -- ech How are  && \
+kubectl wait --for=condition=ready po/busybox
 
 24. Create busybox pod with echo command, ‘How are you’, and delete pod immediately
 
