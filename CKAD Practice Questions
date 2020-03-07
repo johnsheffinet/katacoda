@@ -153,15 +153,17 @@ export POD_PORT=$(kubectl get po/nginx --output=jsonpath='{}') && \
 echo $POD_PORT
 
 kubectl exec po/busybox -- curl $POD_IP:$POD_PORT
+
 # Answer: kubectl get po nginx -o wide// check the connection
 kubectl exec -it busybox -- wget -o- <IP Address>
 
-# 23. Create busybox pod and execute echo command, ‘How are you’, and delete pod manually
-kubectl run busybox --generator=run-pod/v1 --image=busybox -- ech How are  && \
-kubectl wait --for=condition=ready po/busybox
+# 23. Create busybox pod and execute echo How are you command and delete pod manually
+kubectl run busybox --generator=run-pod/v1 --image=busybox -- echo How are you && \
+kubectl wait --for=condition=ready po/busybox && \
+kubectl delete po/busybox
 # Answer: kubectl run busybox --image=nginx --restart=Never -it -- echo "How are you"kubectl delete po busybox
 
-24. Create busybox pod with echo command, ‘How are you’, and delete pod immediately
+24. Create busybox pod and execute echo How are you command and delete pod immediately
 
 # Answer: kubectl run busybox --image=nginx --restart=Never -it --rm -- echo "How are you"
 
