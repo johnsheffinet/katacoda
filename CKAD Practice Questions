@@ -4,7 +4,7 @@
 kubectl get ns
 # Answer: kubectl get ns
 
-# 2. List all pods in all namespaces
+# 2. List all pods in cluster
 kubectl get po --all-namespaces
 # Answer: kubectl get po --all-namespaces
 
@@ -20,25 +20,25 @@ kubectl get svc --namespace=kube-system
 kubectl get po --all-namespaces --output=jsonpath='{.items[*]["metadata.name", "metadata.namespace"]}'
 # Answer: kubectl get pods -o=jsonpath="{.items[*]['metadata.name', 'metadata.namespace']}"
 
-# 6. Create nginx pod in default namespace and verify pod is running
-kubectl run nginx --image=nginx --generator=run-pod/v1 && \
+# 6. Create nginx pod in default namespace and check pod is running
+kubectl run nginx --generator=run-pod/v1 --image=nginx && \
 kubectl wait --for=condition=ready po/nginx && \
 kubectl get po/nginx
-# Answer: kubectl run nginx --image=nginx --restart=Never && \
+# Answer: kubectl run nginx --restart=Never --image=nginx && \
 kubectl get po
 
-# 6.a. Create nginx deployment in default namespace and verify deployment is running
+# 6.a. Create nginx deployment in default namespace and check deployment is running
 kubectl create deploy nginx --image=nginx && \
 kubectl rollout status deploy/nginx && \
 kubectl get deploy/nginx && \
 kubectl get po -l app=nginx
 
 # 7. Create nginx pod with yaml file
-kubectl run nginx --image=nginx --generator=run-pod/v1 --dry-run --output=yaml > nginx.yaml && \
+kubectl run nginx --generator=run-pod/v1 --image=nginx --dry-run --output=yaml > nginx.yaml && \
 kubectl create --filename=nginx.yaml && \
 kubectl wait --for=condition=ready po/nginx && \
 kubectl get po/nginx
-# Answer: kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > nginx.yaml && \
+# Answer: kubectl run nginx --restart=Never --image=nginx --dry-run -o yaml > nginx.yaml && \
 kubectl create -f nginx.yaml
 
 # 8. Show yaml file of nginx pod
