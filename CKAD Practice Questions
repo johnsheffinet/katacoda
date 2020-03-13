@@ -129,35 +129,37 @@ kubectl get po/nginx --output=jsonpath='{}'
 # Answer: kubectl get po nginx -o wide
 
 # 19. Create busybox pod and execute ls command and check logs
-kubectl run busybox --image=busybox --restart=Never -- ls && \
-sleep 10 && \
+kubectl run busybox --restart=Never --image=busybox -- /bin/sh -c 'ls; sleep 3600' && \
+kubectl wait --for=condition=Ready po/busybox && \
 kubectl logs po/busybox
-# Answer: kubectl run busybox --image=busybox --restart=Never -- ls
+# Answer: kubectl run busybox --restart=Never --image=busybox -- ls
 kubectl logs busybox
 
 # 20. Restart busybox pod and check previous logs
 kubectl logs po/busybox --previous
 # Answer: kubectl logs busybox -p
 
-# 21. Create busybox pod and execute sleep 9 command
-kubectl run busybox --restart=Never --image=busybox -- sleep 9 && \
-# Answer: kubectl run busybox --restart=Never --image=busybox -- /bin/sh -c "sleep 9"
+# 21. Create busybox pod and execute sleep 3600 command
+kubectl run busybox --restart=Never --image=busybox -- /bin/sh -c 'sleep 3600' && \
+kubectl wait --for=condition=Ready po/busybox && \
+kubectl get po/busybox
+# Answer: kubectl run busybox --restart=Never --image=busybox -- /bin/sh -c "sleep 3600"
 
 # 22. Check connection from busybox pod to nginx pod
 export POD_IP=$(kubectl get po/nginx --output=jsonpath='{.status.podIP}') && \
-export POD_PORT=80 && \
+export POD_PORT=$(kubectl get po/nginx --output=jsonpath='{.spec.containers[?(@.name=="nginx")].ports[0].containerPort}')  && \
 echo $POD_IP:$POD_PORT && \
-kubectl run busybox --restart=Never --image=busybox -it -- wget -O- $POD_IP:$POD_PORT
+kubectl exec busybox -it -- wget -O- $POD_IP:$POD_PORT
 # Answer: kubectl get po nginx -o wide
 kubectl exec -it busybox -- wget -o- <IP Address>
 
-# 23. Create busybox pod and execute echo How are you command and delete pod manually
+# 23. Create busybox pod and execute echo 'How are you' command and delete pod manually
 kubectl run busybox --restart=Never --image=busybox -it -- echo 'How are you' && \
 kubectl delete po/busybox
 # Answer: kubectl run busybox --restart=Never --image=busybox -it -- echo 'How are you'
 kubectl delete po busybox
 
-24. Create busybox pod and execute echo How are you command and delete pod immediately
+24. Create busybox pod and execute echo 'How are you' command and delete pod immediately
 kubectl run busybox --restart=Never --image=busybox -it --rm -- echo 'How are you' 
 # Answer: kubectl run busybox --restart=Never --image=busybox -it --rm -- echo "How are you"
 
