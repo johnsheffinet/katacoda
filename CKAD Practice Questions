@@ -20,8 +20,8 @@ kubectl get svc --namespace=kube-system
 # Answer
 kubectl get svc -n kube-system
 
-# 005. List all pods with jsonpath showing name and namespace
-kubectl get po --output=jsonpath='{.items[*]["metadata.name", "metadata.namespace"]}'
+# 005. List all pods showing name and namespace with jsonpath
+kubectl get po --output=jsonpath="{.items[*]['metadata.name','metadata.namespace']}{'\n'}"
 # Answer
 kubectl get po -o jsonpath="{.items[*]['metadata.name', 'metadata.namespace']}"
 
@@ -65,27 +65,30 @@ kubectl get po/nginx
 kubectl delete po nginx
 
 # 012. Delete nginx pod without waiting
-kubectl delete po/nginx --grace-period=0 --force
+kubectl run nginx --restart=Never --image=nginx && \
+kubectl wait --for=condition=Ready po/nginx && \
+kubectl delete po/nginx --grace-period=0 --force && \
+kubectl get po/nginx
 # Answer
 kubectl delete po nginx --grace-period=0 --force
 
 # 013. Create nginx pod with 1.17.4 version and expose nginx pod on port 80
-kubectl run nginx --restart=Never --image=nginx:1.17.4 --port=80 && \
+kubectl run nginx --restart=Never --image=nginx:1.17.4 --port=80 -- /bin/sh -c 'sleep 3600' && \
 kubectl wait --for=condition=Ready po/nginx && \
-kubectl get po/nginx --output=wide
+kubectl describe po/nginx
 # Answer
 kubectl run nginx --restart=Never --image=nginx:1.17.4 --port=80
 
-# 014. Update nginx pod to 1.15-alpine image and verify image is updated
-kubectl set image po/nginx nginx=1.15-alpine && \
+# 014. Update nginx pod to alpine:3.11.3 image and verify image is updated
+kubectl set image po/nginx nginx=alpine:3.11.3 && \
 kubectl wait --for=condition=Ready po/nginx && \
-kubectl get po/nginx --output=jsonpath='{.spec.containers[?(@.name=="nginx"].image}{"\n"}'
+kubectl get po/nginx --output=jsonpath='{.spec.containers[].image}{"\n"}'
 # Answer
 kubectl set image pod/nginx nginx=nginx:1.15-alpine
 kubectl describe po nginx
 
-# 015. Update nginx pod to nginx:17.1.1 image and observe changes
-kubectl set image po/nginx nginx=1.15-alpine && \
+# 015. Update nginx pod to nginx:1.17.1 image and observe changes
+kubectl set image po/nginx nginx=nginx:1.17.1 && \
 kubectl get po/nginx --watch
 # Answer
 kubectl set image pod/nginx nginx=nginx:1.17.1
@@ -93,7 +96,7 @@ kubectl describe po nginx
 kubectl get po nginx -w
 
 # 016. Verify image in nginx pod without describe command
-kubectl get po/nginx --output=jsonpath='{.spec.containers[?(@.name=="nginx"].image}{"\n"}'
+kubectl get po/nginx --output=jsonpath='{.spec.containers[].image}{"\n"}'
 # Answer
 kubectl get po nginx -o jsonpath='{.spec.containers[].image}{"\n"}'
 
