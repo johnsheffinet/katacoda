@@ -203,6 +203,13 @@ kubectl create --filename=busybox.yaml && \
 kubectl wait --for=condition=Ready po/busybox && \
 kubectl get po/busybox && \
 kubectl describe po/busybox
+
+kubectl run busybox --restart=Never --image=busybox -- /bin/sh -c "ls; sleep 3600" && \
+kubectl wait --for=condition=Ready po/busybox && \
+kubectl patch po/busybox --type='json' -p='[{"op": "replace", "path": "/spec/containers/0/name", "value":"busybox1"}]'
+kubectl wait --for=condition=Ready po/busybox && \
+kubectl get po/busybox && \
+kubectl describe po/busybox
 # Answer
 kubectl run busybox --restart=Never --image=busybox --dry-run -o yaml -- bin/sh -c "ls; sleep 3600" > busybox.yaml
 kubectl create -f busybox.yaml
