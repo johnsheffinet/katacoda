@@ -194,7 +194,7 @@ kubectl get po --all-namespaces --sort-by=.metadata.creationTimestamp
 kubectl get po --sort-by=.metadata.creationTimestamp
 
 echo ===> Multi-Container Pods (10%)
-29. Create busybox pod with three busybox containers each executing “ls; sleep 3600”, “echo 'Hello World'; sleep 3600” and “echo 'this is the third container'; sleep 3600” respectively and verify busybox pod is running
+# 029. Create busybox pod with three busybox containers each executing “ls; sleep 3600”, “echo 'Hello World'; sleep 3600” and “echo 'this is the third container'; sleep 3600” respectively and verify busybox pod is running
 kubectl run busybox --restart=Never --image=busybox --dry-run --output=yaml -- /bin/sh -c "ls; sleep 3600" > busybox.yaml
 cat << EOF >> busybox.yaml
 
@@ -253,16 +253,18 @@ kubectl create -f busybox.yaml
 kubectl get po busybox
 
 # 035. Verify main.txt exists in busybox container and show index.html from nginx container
+kubectl exec busybox --container=busybox -it -- /bin/sh -c "ls /var/log/main.txt" && \
+export CON_IP=$(kubectl get po/busybox --output=jsonpath="{") && \
+export CON_PORT=$(kubectl get po/busybox --output=jsonpath="{}") && \
+echo $CON_IP:$CON_PORT  && \
+kubectl exec busybox -it -- wget -O- $CON_IP:$CON_PORT
 
+# Answer
+kubectl exec busybox -c busybox -it -- sh cat /var/log/main.txt
+kubectl exec busybox -c nginx -it -- sh cat /usr/share/nginx/html/index.html
 
-// exec into main container
-kubectl exec -it  multi-cont-pod -c main-container -- sh
-cat /var/log/main.txt// exec into sidecar container
 kubectl exec -it  multi-cont-pod -c sidecar-container -- sh
-cat /usr/share/nginx/html/index.html// install curl and get default page
-kubectl exec -it  multi-cont-pod -c sidecar-container -- sh
-# apt-get update && apt-get install -y curl
-# curl localhost
+# apt-get update && apt-get install -y curl && curl localhost
 
 echo ===> Pod Design (20%)
 36. Get the pods with label information
