@@ -211,16 +211,16 @@ kubectl create -f busybox.yaml
 kubectl get po busybox
 
 # 030. Show logs of each container in busybox pod
-kubectl logs po/busybox --container=busybox1 && \
-kubectl logs po/busybox --container=busybox2 && \
-kubectl logs po/busybox --container=busybox3
+kubectl logs busybox --container=busybox1 && \
+kubectl logs busybox --container=busybox2 && \
+kubectl logs busybox --container=busybox3
 # Answer
 kubectl logs busybox -c busybox1
 kubectl logs busybox -c busybox2
 kubectl logs busybox -c busybox3
 
 # 031. Show previous logs of busybox2 container in busybox pod
-kubectl logs po/busybox --container=busybox2 --previous
+kubectl logs busybox --container=busybox2 --previous
 # Answer
 kubectl logs busybox -c busybox2 --previous
 
@@ -230,7 +230,7 @@ kubectl exec busybox --container=busybox3 -it -- ls
 kubectl exec busybox -c busybox3 -- ls
 
 # 033. Show metrics of all containers in busybox pod with file.log
-kubectl top po/busybox --containers > file.log && \
+kubectl top busybox --containers > file.log && \
 cat file.log
 # Answer
 kubectl top pod busybox --containers > file.log
@@ -263,31 +263,48 @@ kubectl exec busybox -it -- wget -O- $CON_IP:$CON_PORT
 kubectl exec busybox -c busybox -it -- sh cat /var/log/main.txt
 kubectl exec busybox -c nginx -it -- sh cat /usr/share/nginx/html/index.html
 
-kubectl exec -it  multi-cont-pod -c sidecar-container -- sh
-# apt-get update && apt-get install -y curl && curl localhost
+kubectl exec busybox -c nginx -it -- sh apt-get update && apt-get install -y curl && curl localhost
 
 echo ===> Pod Design (20%)
-36. Get the pods with label information
-
+# 036. Show label of all pods
+kubectl get po --show-labels
+# Answer
 kubectl get pods --show-labels
-37. Create 5 nginx pods in which two of them is labeled env=prod and three of them is labeled env=dev
 
+# 037. Create 5, nginx pods where 2 have env=prod labels and 3 have env=dev labels
+kubectl run nginx-dev1 --restart=Never --image=nginx --labels=env=dev && \
+kubectl run nginx-dev2 --restart=Never --image=nginx --labels=env=dev && \
+kubectl run nginx-dev3 --restart=Never --image=nginx --labels=env=dev && \
+kubectl run nginx-pro1 --restart=Never --image-nginx --labels=env=prod && \
+kubectl run nginx-pro2 --restart=Never --image=nginx --labels=env=prod && \
+# Answer
 kubectl run nginx-dev1 --image=nginx --restart=Never --labels=env=dev
 kubectl run nginx-dev2 --image=nginx --restart=Never --labels=env=dev
-kubectl run nginx-dev3 --image=nginx --restart=Never --labels=env=devkubectl run nginx-prod1 --image=nginx --restart=Never --labels=env=prod
+kubectl run nginx-dev3 --image=nginx --restart=Never --labels=env=dev
+kubectl run nginx-prod1 --image=nginx --restart=Never --labels=env=prod
 kubectl run nginx-prod2 --image=nginx --restart=Never --labels=env=prod
-38. Verify all the pods are created with correct labels
 
+# 038. Verify all pods are running with correct labels
+kubectl get po --selector=env=dev --show-labels && \
+kubectl get po --selector=env=prod --show-labels
+# Answer
 kubeclt get pods --show-labels
-39. Get the pods with label env=dev
 
+# 039. Get the pods with env=dev label
+kubectl get po --selector=env=dev --show-labels
+# Answer
 kubectl get pods -l env=dev
-40. Get the pods with label env=dev and also output the labels
 
+# 040. Get pods with env=dev label and show labels
+kubectl get po --selector=env=dev --show-labels
+# Answer
 kubectl get pods -l env=dev --show-labels
-41. Get the pods with label env=prod
 
+# 041. Get pods with env=prod label
+kubectl get po --selector=env=prod --show-labels
+# Amswer
 kubectl get pods -l env=prod
+
 42. Get the pods with label env=prod and also output the labels
 
 kubectl get pods -l env=prod --show-labels
