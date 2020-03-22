@@ -182,10 +182,7 @@ kubectl get po --all-namespaces --sort-by=.metadata.name
 # Answer
 kubectl get po --sort-by=.metadata.name
 
-# 027.a. List all pods filtered by name
-kubectl get po --selector=run!=nginx
-
-# 027.b. List all pods filtered by running
+# 027.a. List all pods filtered by running
 kubectl get po --field-selector=status.phase!=Running
 
 # 028. List all pods sorted by created time
@@ -252,13 +249,12 @@ kubectl run busybox --restart=Never --image=busbox --dry-run -o yaml > busybox.y
 kubectl create -f busybox.yaml
 kubectl get po busybox
 
-# 035. Verify main.txt exists in busybox container and show index.html from nginx container
+# 035. Verify main.txt exists in busybox container and show index.html in nginx container
 kubectl exec busybox --container=busybox -it -- /bin/sh -c "ls /var/log/main.txt" && \
 export CON_IP=$(kubectl get po/busybox --output=jsonpath="{") && \
 export CON_PORT=$(kubectl get po/busybox --output=jsonpath="{}") && \
 echo $CON_IP:$CON_PORT  && \
 kubectl exec busybox -it -- wget -O- $CON_IP:$CON_PORT
-
 # Answer
 kubectl exec busybox -c busybox -it -- sh cat /var/log/main.txt
 kubectl exec busybox -c nginx -it -- sh cat /usr/share/nginx/html/index.html
@@ -266,7 +262,7 @@ kubectl exec busybox -c nginx -it -- sh cat /usr/share/nginx/html/index.html
 kubectl exec busybox -c nginx -it -- sh apt-get update && apt-get install -y curl && curl localhost
 
 echo ===> Pod Design (20%)
-# 036. Show label of all pods
+# 036. Show labels for all pods
 kubectl get po --show-labels
 # Answer
 kubectl get pods --show-labels
@@ -276,7 +272,7 @@ kubectl run nginx-dev1 --restart=Never --image=nginx --labels=env=dev && \
 kubectl run nginx-dev2 --restart=Never --image=nginx --labels=env=dev && \
 kubectl run nginx-dev3 --restart=Never --image=nginx --labels=env=dev && \
 kubectl run nginx-pro1 --restart=Never --image-nginx --labels=env=prod && \
-kubectl run nginx-pro2 --restart=Never --image=nginx --labels=env=prod && \
+kubectl run nginx-pro2 --restart=Never --image=nginx --labels=env=prod
 # Answer
 kubectl run nginx-dev1 --image=nginx --restart=Never --labels=env=dev
 kubectl run nginx-dev2 --image=nginx --restart=Never --labels=env=dev
@@ -284,58 +280,81 @@ kubectl run nginx-dev3 --image=nginx --restart=Never --labels=env=dev
 kubectl run nginx-prod1 --image=nginx --restart=Never --labels=env=prod
 kubectl run nginx-prod2 --image=nginx --restart=Never --labels=env=prod
 
-# 038. Verify all pods are running with correct labels
-kubectl get po --selector=env=dev --show-labels && \
-kubectl get po --selector=env=prod --show-labels
+# 038. Verify all nginx pods are running with correct labels
+kubectl get po --field-selector=status.phase==Running --show-labels
 # Answer
 kubeclt get pods --show-labels
 
-# 039. Get the pods with env=dev label
-kubectl get po --selector=env=dev --show-labels
+# 039. Get pods with env=dev label
+kubectl get po --selector="env==dev"
 # Answer
 kubectl get pods -l env=dev
 
-# 040. Get pods with env=dev label and show labels
-kubectl get po --selector=env=dev --show-labels
+# 040. Show labels for pods with env=dev label
+kubectl get po --selector="env in (dev)" --show-labels
 # Answer
 kubectl get pods -l env=dev --show-labels
 
 # 041. Get pods with env=prod label
-kubectl get po --selector=env=prod --show-labels
+kubectl get po --selector="env==prod"
 # Amswer
 kubectl get pods -l env=prod
 
-42. Get the pods with label env=prod and also output the labels
-
+# 042. Show labels for pods with env=prod label
+kubectl get po --selector="env==prod" --show-labels
+# Answer
 kubectl get pods -l env=prod --show-labels
-43. Get the pods with label env
 
-kubectl get pods -L env
-44. Get the pods with labels env=dev and env=prod
+# 043. Get pods with env label
+kubectl get po --selector="env" --show-labels
+# Answer
+kubectl get pods -l env
 
+# 044. Get pods with env=dev and env=prod labels
+kubectl get po --selector="env in (dev,prod)"
+# Answer
 kubectl get pods -l 'env in (dev,prod)'
-45. Get the pods with labels env=dev and env=prod and output the labels as well
 
+# 045. Show labels for pods with env=dev and env=prod labels
+kubectl get po --selector="env in (dev,prod)" --show-labels
+# Answer
 kubectl get pods -l 'env in (dev,prod)' --show-labels
-46. Change the label for one of the pod to env=uat and list all the pods to verify
 
+# 046. Update nginx-dev3 pod with env=uat label and verify label is updated
+kubectl label po/nginx-dev3 env=uat && \
+kubectl get po --selector="env==uat" --show-labels
+# Answer
 kubectl label pod/nginx-dev3 env=uat --overwrite
 kubectl get pods --show-labels
-47. Remove the labels for the pods that we created now and verify all the labels are removed
 
+# 047. Remowe all env labels from all nginx pods and verify all env labels are removed from all nginx pods
+kubectl label po/nginx-dev{1..3},po/nginx-pro{1..2} env- && \
+kubectl get po/nginx-dev{1..3},po/nginx-pro{1..2} --show-labels
+# Answer
 kubectl label pod nginx-dev{1..3} env-
-kubectl label pod nginx-prod{1..2} env-kubectl get po --show-labels
-48. Let’s add the label app=nginx for all the pods and verify
+kubectl label pod nginx-prod{1..2} env-
+kubectl get po --show-labels
 
+# 048. Add app=nginx label to all nginx pods and verify app=nginx label is added to all nginx pods
+kubectl label po/nginx-dev{1..3},po/nginx-pro{1..2} app=nginx && \
+kubectl get po --selector="app==nginx" --show-labels
+# Answer
 kubectl label pod nginx-dev{1..3} app=nginx
-kubectl label pod nginx-prod{1..2} app=nginxkubectl get po --show-labels
-49. Get all the nodes with labels (if using minikube you would get only master node)
+kubectl label pod nginx-prod{1..2} app=nginx
+kubectl get po --show-labels
 
+# 049. Show labels for all nodes
+kubectl get no --show-labels
+# Answer
 kubectl get nodes --show-labels
-50. Label the node (minikube if you are using) nodeName=nginxnode
 
+# 050. Add nodeName=nginxnode label to minikube node and verify nodeName=nginxnode label is added to minikube node
+kubectl label no/minikube nodeName=nginxnode && \
+kubectl get no/minikube --show-labels
+# Answer
 kubectl label node minikube nodeName=nginxnode
-51. Create a Pod that will be deployed on this node with the label nodeName=nginxnode
+
+# 051. Create nginx pod on node with nodeName=nginxnode label
 
 kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > pod.yaml// add the nodeSelector like below and create the pod
 kubectl create -f pod.yaml
