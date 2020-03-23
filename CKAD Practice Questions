@@ -2,42 +2,42 @@
 
 # 001. List all namespaces in cluster
 kubectl get ns
-# Answer:
-kubectl get ns
+# Answer
+kubectl get namespaces
 
 # 002. List all pods in cluster
 kubectl get po --all-namespaces
 # Answer
-kubectl get po -A
+kubectl get pods -A
 
 # 003. List all pods in specific namespace
 kubectl get po --namespace=kube-system
 # Answer
-kubectl get po -n kube-system
+kubectl get pods -n kube-system
 
 # 004. List all services in specific namespace
 kubectl get svc --namespace=kube-system
 # Answer
-kubectl get svc -n kube-system
+kubectl get services -n kube-system
 
 # 005. List all pods showing name and namespace with jsonpath
 kubectl get po --output=jsonpath="{.items[*]['metadata.name','metadata.namespace']}{'\n'}"
 # Answer
-kubectl get po -o jsonpath="{.items[*]['metadata.name', 'metadata.namespace']}"
+kubectl get pods -o jsonpath="{.items[*]['metadata.name', 'metadata.namespace']}"
 
 # 006. Create nginx pod in default namespace and verify nginx pod is running
-kubectl run nginx --restart=Never --image=nginx --port=80 && \
+kubectl run nginx --restart=Never --image=nginx && \
 kubectl wait --for=condition=Ready po/nginx && \
 kubectl get po/nginx
 # Answer
 kubectl run nginx --restart=Never --image=nginx
-kubectl get po
+kubectl get pods
 
 # 007. Create nginx pod with yaml file
 kubectl delete po/nginx && \
-kubectl run nginx --restart=Never --image=nginx --port=80 --dry-run --output=yaml > nginx.yaml && \
+kubectl run nginx --restart=Never --image=nginx --dry-run --output=yaml > nginx.yaml && \
 kubectl create --filename=nginx.yaml && \
-kubectl wait --for=condition=Ready po/nginx && \
+kubectl wait --for=condition=Ready --filename=nginx.yaml && \
 kubectl get po/nginx
 # Answer
 kubectl run nginx --restart=Never --image=nginx --dry-run -o yaml > nginx.yaml
@@ -46,54 +46,54 @@ kubectl create -f nginx.yaml
 # 008. Show yaml file for nginx pod
 kubectl get po/nginx --output=yaml
 # Answer
-kubectl get po nginx -o yaml
+kubectl get pods nginx -o yaml
 
 # 009. Show yaml file for nginx pod without cluster-specific information
 kubectl get po/nginx --output=yaml --export
 # Answer
-kubectl get po nginx -o yaml --export
+kubectl get pods nginx -o yaml --export
 
-# 010. Show details of nginx pod
+# 010. Show details for nginx pod
 kubectl describe po/nginx
 # Answer
-kubectl describe po nginx
+kubectl describe pods nginx
 
 # 011. Delete nginx pod
 kubectl delete po/nginx && \
 kubectl get po/nginx
 # Answer
-kubectl delete po nginx
+kubectl delete pods nginx
 
 # 012. Delete nginx pod without waiting
-kubectl run nginx --restart=Never --image=nginx --port=80 && \
+kubectl run nginx --restart=Never --image=nginx && \
 kubectl wait --for=condition=Ready po/nginx && \
 kubectl delete po/nginx --grace-period=0 --force && \
 kubectl get po/nginx
 # Answer
-kubectl delete po nginx --grace-period=0 --force
+kubectl delete pods nginx --grace-period=0 --force
 
 # 013. Create nginx pod with nginx:1.17.4 image and expose nginx pod on port 80
-kubectl run nginx --restart=Never --image=nginx:1.17.4 --port=80 -- /bin/sh -c "sleep 3600" && \
+kubectl run nginx --restart=Never --image=nginx:1.17.4 --port=80 && \
 kubectl wait --for=condition=Ready po/nginx && \
 kubectl describe po/nginx
 # Answer
 kubectl run nginx --restart=Never --image=nginx:1.17.4 --port=80
 
-# 014. Update nginx pod to alpine:3.11.3 image and verify image is updated
-kubectl set image po/nginx nginx=alpine:3.11.3 && \
+# 014. Update nginx pod with alpine:3.11.3 image and verify image is updated
+kubectl set image po/nginx nginx=alpine:3.11.3 -- /bin/sh -c "sleep 3600" && \
 kubectl wait --for=condition=Ready po/nginx && \
-kubectl get po/nginx --output=jsonpath="{.spec.containers[].image}{'\n'}"
+kubectl describe po/nginx
 # Answer
 kubectl set image pod/nginx nginx=nginx:1.15-alpine
-kubectl describe po nginx
+kubectl describe pods nginx
 
-# 015. Update nginx pod to nginx:1.17.1 image and observe changes
+# 015. Update nginx pod with nginx:1.17.1 image and observe changes
 kubectl set image po/nginx nginx=nginx:1.17.1 && \
 kubectl get po/nginx --watch
 # Answer
 kubectl set image pod/nginx nginx=nginx:1.17.1
 kubectl describe po nginx
-kubectl get po nginx -w
+kubectl get pods nginx -w
 
 # 016. Verify image in nginx pod without describe command
 kubectl get po/nginx --output=jsonpath="{.spec.containers[].image}{'\n'}"
@@ -102,9 +102,9 @@ kubectl get po nginx -o jsonpath="{.spec.containers[].image}{'\n'}"
 
 # 017. Create nginx pod and execute shell command
 kubectl delete po/nginx && \
-kubectl run nginx --restart=Never --image=nginx --port=80 && \
+kubectl run nginx --restart=Never --image=nginx --port=8080 && \
 kubectl wait --for=condition=Ready po/nginx && \
-kubectl exec nginx -it -- /bin/sh -c "ls; exit"
+kubectl exec nginx -it -- /bin/sh -c "ls"
 # Answer
 kubectl run nginx --restart=Never --image=nginx
 kubectl exec -it nginx /bin/sh
@@ -115,23 +115,24 @@ kubectl get po/nginx --output=jsonpath="{.status.podIP}{'\n'}"
 kubectl get po nginx -o wide
 
 # 019. Create busybox pod and execute ls command and show logs
-kubectl run busybox --restart=Never --image=busybox -- sleep 3600 && \
+kubectl run busybox --restart=Never --image=busybox -- /bin/sh -c "sleep 3600" && \
 kubectl wait --for=condition=Ready po/busybox && \
-kubectl exec busybox -it -- ls && \
-kubectl logs po/busybox
+kubectl exec busybox -- /bin/sh -c "ls" && \
+kubectl logs busybox
 # Answer
 kubectl run busybox --restart=Never --image=busybox -- ls
 kubectl logs busybox
 
 # 020. Show previous logs of busybox pod
-kubectl logs po/busybox --previous
+kubectl logs busybox --previous
 # Answer
 kubectl logs busybox -p
 
 # 021. Create busybox pod and execute sleep 3600 command
 kubectl delete po/busybox && \
-kubectl run busybox --restart=Never --image=busybox -- sleep 3600 && \
-kubectl wait --for=condition=Ready po/busybox
+kubectl run busybox --restart=Never --image=busybox -- /bin/sh -c "sleep 3600" && \
+kubectl wait --for=condition=Ready po/busybox && \
+kubectl get po/busybox
 # Answer
 kubectl run busybox --restart=Never --image=busybox -- /bin/sh -c "sleep 3600"
 
@@ -139,30 +140,30 @@ kubectl run busybox --restart=Never --image=busybox -- /bin/sh -c "sleep 3600"
 export POD_IP=$(kubectl get po/nginx --output=jsonpath="{.status.podIP}") && \
 export POD_PORT=$(kubectl get po/nginx --output=jsonpath="{.spec.containers[].ports[0].containerPort}") && \
 echo $POD_IP:$POD_PORT  && \
-kubectl exec busybox -it -- wget -O- $POD_IP:$POD_PORT
+kubectl exec busybox -it -- /bin/sh -c "wget -O- $POD_IP:$POD_PORT"
 # Answer
 kubectl get po nginx -o wide
 kubectl exec -it busybox -- wget -o- <IP Address>
 
 # 023. Create busybox pod and execute echo 'How are you' command and delete pod manually
 kubectl delete po/busybox && \
-kubectl run busybox --restart=Never --image=busybox -- sleep 3600 && \
+kubectl run busybox --restart=Never --image=busybox -- /bin/sh -c "sleep 3600" && \
 kubectl wait --for=condition=Ready po/busybox && \
-kubectl exec busybox -it -- echo 'How are you' && \
+kubectl exec busybox -it -- /bin/sh -c "echo 'How are you'" && \
 kubectl delete po/busybox
 # Answer
 kubectl run busybox --restart=Never --image=busybox -it -- echo 'How are you'
 kubectl delete po busybox
 
 # 024. Create busybox pod and execute echo 'How are you' command and delete pod immediately
-kubectl run busybox --restart=Never --image=busybox --rm -it -- echo 'How are you' && \
+kubectl run busybox --restart=Never --image=busybox --rm -it -- /bin/sh -c "echo 'How are you'" && \
 kubectl get po/busybox
 # Answer
 kubectl run busybox --restart=Never --image=busybox -it --rm -- echo "How are you"
 
 # 025. Create nginx pod and show different verbosity levels
 kubectl delete po/nginx && \
-kubectl run nginx --restart=Never --image=nginx --port=80 && \
+kubectl run nginx --restart=Never --image=nginx && \
 kubectl wait --for=condition=Ready po/nginx && \
 kubectl get po/nginx --v=0 && \
 kubectl get po/nginx --v=9
@@ -177,20 +178,18 @@ kubectl get po/nginx --output=custom-columns='POD_NAME:.metadata.name, POD_STATU
 # Answer
 kubectl get po --output=custom-columns="POD_NAME:.metadata.name, POD_STATUS:.status.containerStatuses[].state"
 
-# 027 List all pods sorted by name
+# 027. List all pods sorted by name
 kubectl get po --all-namespaces --sort-by=.metadata.name
 # Answer
 kubectl get po --sort-by=.metadata.name
-
-# 027.a. List all pods filtered by running
-kubectl get po --field-selector=status.phase!=Running
 
 # 028. List all pods sorted by created time
 kubectl get po --all-namespaces --sort-by=.metadata.creationTimestamp
 # Answer
 kubectl get po --sort-by=.metadata.creationTimestamp
 
-echo ===> Multi-Container Pods (10%)
+# Multi-Container Pods (10%)
+
 # 029. Create busybox pod with three busybox containers each executing "ls; sleep 3600", "echo 'Hello World'; sleep 3600" and "echo 'this is the third container'; sleep 3600" respectively and verify busybox pod is running
 kubectl run busybox --restart=Never --image=busybox --dry-run --output=yaml -- /bin/sh -c "ls; sleep 3600"
 cat << EOF >> busybox.yaml
@@ -253,13 +252,14 @@ kubectl exec busybox --container=busybox -it -- /bin/sh -c "ls /var/log/main.txt
 export POD_IP=$(kubectl get po/busybox --output=jsonpath="{") && \
 export POD_PORT=$(kubectl get po/busybox --output=jsonpath="{}") && \
 echo $POD_IP:$POD_PORT && \
-kubectl exec busybox -it -- wget -O- $POD_IP:$POD_PORT
+kubectl exec busybox -it -- /bin/sh -c "wget -O- $POD_IP:$POD_PORT"
 # Answer
 kubectl exec busybox -c busybox -it -- sh cat /var/log/main.txt
 kubectl exec busybox -c nginx -it -- sh cat /usr/share/nginx/html/index.html
 kubectl exec busybox -c nginx -it -- sh apt-get update && apt-get install -y curl && curl localhost
 
-echo ===> Pod Design (20%)
+# Pod Design (20%)
+
 # 036. Show labels for all pods
 kubectl get po --show-labels
 # Answer
@@ -283,7 +283,7 @@ kubectl get po --selector="run==nginx" --field-selector=status.phase==Running --
 # Answer
 kubeclt get pods --show-labels
 
-# 039. Get pods with env=dev label
+# 039. List pods with env=dev label
 kubectl get po --selector="env==dev"
 # Answer
 kubectl get pods -l env=dev
@@ -293,7 +293,7 @@ kubectl get po --selector="env in (dev)" --show-labels
 # Answer
 kubectl get pods -l env=dev --show-labels
 
-# 041. Get pods with env=prd label
+# 041. List pods with env=prd label
 kubectl get po --selector="env==prd"
 # Amswer
 kubectl get pods -l env=prod
@@ -303,17 +303,17 @@ kubectl get po --selector="env in (prd)" --show-labels
 # Answer
 kubectl get pods -l env=prod --show-labels
 
-# 043. Get pods with env label
+# 043. List pods with env label
 kubectl get po --selector="env" --show-labels
 # Answer
 kubectl get pods -l env
 
-# 044. Get pods with env=dev or env=prod labels
+# 044. List pods with env=dev or env=prod labels
 kubectl get po --selector="env in (dev,prod)"
 # Answer
 kubectl get pods -l 'env in (dev,prod)'
 
-# 045. Show labels for pods with env=dev and env=prod labels
+# 045. Show labels for pods with env=dev or env=prod labels
 kubectl get po --selector="env in (dev,prod)" --show-labels
 # Answer
 kubectl get pods -l 'env in (dev,prod)' --show-labels
@@ -324,7 +324,6 @@ kubectl get po/nginx-dev3 --show-labels
 # Answer
 kubectl label pod/nginx-dev3 env=uat --overwrite
 kubectl get pods --show-labels
-# Answer
 
 # 047. Remowe all env labels from all nginx pods and verify all env labels are removed from all nginx pods
 kubectl label po/nginx-dev{1..3},po/nginx-prd{1..2} env- && \
@@ -382,21 +381,23 @@ kubectl annotate po/nginx-dev{1..3},po/nginx-prd{1..2} name=webapp
 kubectl annotate pod nginx-dev{1..3} name=webapp
 kubectl annotate pod nginx-prd{1..2} name=webapp
 
-55. Verify all nginx pods have name=webapp annotation
-
+# 055. Verify all nginx pods have name=webapp annotation
+kubectl get po/nginx-dev{1..3},po/nginx-prd{1..2} --output=jsonpath="{}"
 # Answer
 kubectl describe po nginx-dev{1..3} | grep -i annotations
 kubectl describe po nginx-prod{1..2} | grep -i annotations
 
 # 056. Remove all annotations on nginx pods and verify all annotations on nginx pods are removed
-
+kubectl annotate nginx-dev{1..3},po/nginx-prd{1..2} name- && \
+kubectl get po/nginx-dev{1..3},po/nginx-prd{1..2} --output=jsonpath="{}"
 # Answer
 kubectl annotate pod nginx-dev{1..3} name-
-kubectl annotate pod nginx-prod{1..2} name-kubectl describe po nginx-dev{1..3} | grep -i annotations
+kubectl annotate pod nginx-prod{1..2} name-
+kubectl describe po nginx-dev{1..3} | grep -i annotations
 kubectl describe po nginx-prod{1..2} | grep -i annotations
 
 # 057. Remove all nginx pods
-
+kubectl delete po --all
 # Answer
 kubectl delete po --all
 
