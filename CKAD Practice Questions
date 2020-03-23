@@ -191,8 +191,8 @@ kubectl get po --all-namespaces --sort-by=.metadata.creationTimestamp
 kubectl get po --sort-by=.metadata.creationTimestamp
 
 echo ===> Multi-Container Pods (10%)
-# 029. Create busybox pod with three busybox containers each executing “ls; sleep 3600”, “echo 'Hello World'; sleep 3600” and “echo 'this is the third container'; sleep 3600” respectively and verify busybox pod is running
-kubectl run busybox --restart=Never --image=busybox --dry-run --output=yaml -- /bin/sh -c "ls; sleep 3600" > busybox.yaml
+# 029. Create busybox pod with three busybox containers each executing "ls; sleep 3600", "echo 'Hello World'; sleep 3600" and "echo 'this is the third container'; sleep 3600" respectively and verify busybox pod is running
+kubectl run busybox --restart=Never --image=busybox --dry-run --output=yaml -- /bin/sh -c "ls; sleep 3600"
 cat << EOF >> busybox.yaml
 
 EOF
@@ -201,13 +201,12 @@ kubectl create --filename=busybox.yaml && \
 kubectl wait --for=condition=Ready po/busybox && \
 kubectl get po/busybox && \
 kubectl describe po/busybox
-
 # Answer
 kubectl run busybox --restart=Never --image=busybox --dry-run -o yaml -- bin/sh -c "ls; sleep 3600" > busybox.yaml
 kubectl create -f busybox.yaml
 kubectl get po busybox
 
-# 030. Show logs of each container in busybox pod
+# 030. Show logs for each container in busybox pod
 kubectl logs busybox --container=busybox1 && \
 kubectl logs busybox --container=busybox2 && \
 kubectl logs busybox --container=busybox3
@@ -216,26 +215,26 @@ kubectl logs busybox -c busybox1
 kubectl logs busybox -c busybox2
 kubectl logs busybox -c busybox3
 
-# 031. Show previous logs of busybox2 container in busybox pod
+# 031. Show previous logs for busybox2 container in busybox pod
 kubectl logs busybox --container=busybox2 --previous
 # Answer
 kubectl logs busybox -c busybox2 --previous
 
-# 032. Execute ls command in busybox3 container of busybox pod
+# 032. Execute ls command in busybox3 container in busybox pod
 kubectl exec busybox --container=busybox3 -it -- ls
 # Answer
 kubectl exec busybox -c busybox3 -- ls
 
-# 033. Show metrics of all containers in busybox pod with file.log
-kubectl top busybox --containers > file.log && \
-cat file.log
+# 033. Show metrics for all containers in busybox pod with top.log
+minikube addons enable metric-server && \
+kubectl top po > top.log && \
+cat top.log
 # Answer
 kubectl top pod busybox --containers > file.log
 cat file.log
 
-# 034. Create busybox pod and execute “while true; do echo ‘Hi I am from Main container’ >> /var/log/index.html; sleep 5; done” commands and include nginx container exposed on port 80 and verify all containers in busybox pod are running.
-Use emptyDir Volume and mount this volume on path /var/log for busybox and on path /usr/share/nginx/html for nginx container.
-kubectl run busybos --restart=Never --image=busybox --dry-run --output=yaml -- “while true; do echo ‘Hi I am from Main container’ >> /var/log/index.html; sleep 5; done” > busybox.yaml
+# 034. Create busybox pod and execute "while true; do echo 'Hi I am from Main container' >> /var/log/index.html; sleep 5; done" command and add nginx container exposed on port 80 and verify all containers in busybox pod are running
+kubectl run busybox --restart=Never --image=busybox --port=80 --dry-run --output=yaml -- /bin/sh -c "while true; do echo 'Hi I am from Main container' >> /var/log/index.html; sleep 5; done"
 cat << EOF >> busybox.yaml
 
 EOF
@@ -251,14 +250,13 @@ kubectl get po busybox
 
 # 035. Verify main.txt exists in busybox container and show index.html in nginx container
 kubectl exec busybox --container=busybox -it -- /bin/sh -c "ls /var/log/main.txt" && \
-export CON_IP=$(kubectl get po/busybox --output=jsonpath="{") && \
-export CON_PORT=$(kubectl get po/busybox --output=jsonpath="{}") && \
-echo $CON_IP:$CON_PORT  && \
-kubectl exec busybox -it -- wget -O- $CON_IP:$CON_PORT
+export POD_IP=$(kubectl get po/busybox --output=jsonpath="{") && \
+export POD_PORT=$(kubectl get po/busybox --output=jsonpath="{}") && \
+echo $POD_IP:$POD_PORT && \
+kubectl exec busybox -it -- wget -O- $POD_IP:$POD_PORT
 # Answer
 kubectl exec busybox -c busybox -it -- sh cat /var/log/main.txt
 kubectl exec busybox -c nginx -it -- sh cat /usr/share/nginx/html/index.html
-
 kubectl exec busybox -c nginx -it -- sh apt-get update && apt-get install -y curl && curl localhost
 
 echo ===> Pod Design (20%)
@@ -267,21 +265,21 @@ kubectl get po --show-labels
 # Answer
 kubectl get pods --show-labels
 
-# 037. Create 5, nginx pods where 2 have env=prod labels and 3 have env=dev labels
-kubectl run nginx-dev1 --restart=Never --image=nginx --labels=env=dev && \
-kubectl run nginx-dev2 --restart=Never --image=nginx --labels=env=dev && \
-kubectl run nginx-dev3 --restart=Never --image=nginx --labels=env=dev && \
-kubectl run nginx-pro1 --restart=Never --image-nginx --labels=env=prod && \
-kubectl run nginx-pro2 --restart=Never --image=nginx --labels=env=prod
+# 037. Create 5, nginx pods where 2 have env=prd labels and 3 have env=dev labels
+kubectl run nginx-dev1 --restart=Never --image=nginx --labels="env=dev" && \
+kubectl run nginx-dev2 --restart=Never --image=nginx --labels="env=dev" && \
+kubectl run nginx-dev3 --restart=Never --image=nginx --labels="env=dev" && \
+kubectl run nginx-prd1 --restart=Never --image-nginx --labels="env=prd" && \
+kubectl run nginx-prd2 --restart=Never --image-nginx --labels="env=prd"
 # Answer
 kubectl run nginx-dev1 --image=nginx --restart=Never --labels=env=dev
 kubectl run nginx-dev2 --image=nginx --restart=Never --labels=env=dev
 kubectl run nginx-dev3 --image=nginx --restart=Never --labels=env=dev
-kubectl run nginx-prod1 --image=nginx --restart=Never --labels=env=prod
-kubectl run nginx-prod2 --image=nginx --restart=Never --labels=env=prod
+kubectl run nginx-prd1 --image=nginx --restart=Never --labels=env=prd
+kubectl run nginx-prd2 --image=nginx --restart=Never --labels=env=prd
 
 # 038. Verify all nginx pods are running with correct labels
-kubectl get po --field-selector=status.phase==Running --show-labels
+kubectl get po --selector="run==nginx" --field-selector=status.phase==Running --show-labels
 # Answer
 kubeclt get pods --show-labels
 
@@ -295,13 +293,13 @@ kubectl get po --selector="env in (dev)" --show-labels
 # Answer
 kubectl get pods -l env=dev --show-labels
 
-# 041. Get pods with env=prod label
-kubectl get po --selector="env==prod"
+# 041. Get pods with env=prd label
+kubectl get po --selector="env==prd"
 # Amswer
 kubectl get pods -l env=prod
 
 # 042. Show labels for pods with env=prod label
-kubectl get po --selector="env==prod" --show-labels
+kubectl get po --selector="env in (prd)" --show-labels
 # Answer
 kubectl get pods -l env=prod --show-labels
 
@@ -310,7 +308,7 @@ kubectl get po --selector="env" --show-labels
 # Answer
 kubectl get pods -l env
 
-# 044. Get pods with env=dev and env=prod labels
+# 044. Get pods with env=dev or env=prod labels
 kubectl get po --selector="env in (dev,prod)"
 # Answer
 kubectl get pods -l 'env in (dev,prod)'
@@ -322,14 +320,15 @@ kubectl get pods -l 'env in (dev,prod)' --show-labels
 
 # 046. Update nginx-dev3 pod with env=uat label and verify label is updated
 kubectl label po/nginx-dev3 env=uat && \
-kubectl get po --selector="env==uat" --show-labels
+kubectl get po/nginx-dev3 --show-labels
 # Answer
 kubectl label pod/nginx-dev3 env=uat --overwrite
 kubectl get pods --show-labels
+# Answer
 
 # 047. Remowe all env labels from all nginx pods and verify all env labels are removed from all nginx pods
-kubectl label po/nginx-dev{1..3},po/nginx-pro{1..2} env- && \
-kubectl get po/nginx-dev{1..3},po/nginx-pro{1..2} --show-labels
+kubectl label po/nginx-dev{1..3},po/nginx-prd{1..2} env- && \
+kubectl get po/nginx-dev{1..3},po/nginx-prd{1..2} --show-labels
 # Answer
 kubectl label pod nginx-dev{1..3} env-
 kubectl label pod nginx-prod{1..2} env-
@@ -355,43 +354,67 @@ kubectl get no/minikube --show-labels
 kubectl label node minikube nodeName=nginxnode
 
 # 051. Create nginx pod on node with nodeName=nginxnode label
+kubectl run nginx --restart=Never --image=nginx --dry-run --output=yaml
+cat << EOF >> nginx.yaml
 
-kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > pod.yaml// add the nodeSelector like below and create the pod
+EOF
+kubectl delete po/nginx && \
+kubectl create --filename=nginx.yaml && \
+kubectl wait --for=condition=Ready po/nginx && \
+kubectl get po/nginx --output=wide
+# Answer
+kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > pod.yaml
 kubectl create -f pod.yaml
-pod.yaml
-52. Verify the pod that it is scheduled with the node selector
 
+# 052. Verify nginx pod is running on minikube node
+kubectl get po/nginx --output=wide
+# Answer
 kubectl describe po nginx | grep Node-Selectors
-53. Verify the pod nginx that we just created has this label
 
+# 053. Verify nginx pod has Node-Selectors label
+kubectl describe po/nginx | grep "Node-Selectors"
+# Answer
 kubectl describe po nginx | grep Labels
-54. Annotate the pods with name=webapp
 
+# 054. Annotate all nginx pods with name=webapp annotation
+kubectl annotate po/nginx-dev{1..3},po/nginx-prd{1..2} name=webapp
+# Answer
 kubectl annotate pod nginx-dev{1..3} name=webapp
-kubectl annotate pod nginx-prod{1..2} name=webapp
-55. Verify the pods that have been annotated correctly
+kubectl annotate pod nginx-prd{1..2} name=webapp
 
+55. Verify all nginx pods have name=webapp annotation
+
+# Answer
 kubectl describe po nginx-dev{1..3} | grep -i annotations
 kubectl describe po nginx-prod{1..2} | grep -i annotations
-56. Remove the annotations on the pods and verify
 
+# 056. Remove all annotations on nginx pods and verify all annotations on nginx pods are removed
+
+# Answer
 kubectl annotate pod nginx-dev{1..3} name-
 kubectl annotate pod nginx-prod{1..2} name-kubectl describe po nginx-dev{1..3} | grep -i annotations
 kubectl describe po nginx-prod{1..2} | grep -i annotations
-57. Remove all the pods that we created so far
 
+# 057. Remove all nginx pods
+
+# Answer
 kubectl delete po --all
-58. Create a deployment called webapp with image nginx with 5 replicas
 
-kubectl create deploy webapp --image=nginx --dry-run -o yaml > webapp.yaml// change the replicas to 5 in the yaml and create it
-kubectl create -f webapp.yaml
-webapp.yaml
-59. Get the deployment you just created with labels
+# 058. Create nginx deployment with 5 replicas
 
-kubectl get deploy webapp --show-labels
+# Answer
+kubectl create deploy nginx --image=nginx -- replicas=5 --dry-run -o yaml
+kubectl create -f nginx.yaml
+
+# 059. Show labels for nginx deployment
+
+# Answer
+kubectl get deploy nginx --show-labels
+
 60. Output the yaml file of the deployment you just created
 
 kubectl get deploy webapp -o yaml
+
 61. Get the pods of this deployment
 
 // get the label of the deployment
