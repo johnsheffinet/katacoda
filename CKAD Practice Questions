@@ -21,11 +21,12 @@ kubectl get svc --namespace=kube-system
 kubectl get services -n kube-system
 
 # 005. List all pods showing name and namespace with jsonpath
-kubectl get po --output=jsonpath="{.items[*]['metadata.name','metadata.namespace']}{'\n'}"
+kubectl get po --all-namespaces --output=jsonpath="{.items[*]['metadata.name','metadata.namespace']}{'\n'}"
 # Answer
-kubectl get pods -o jsonpath="{.items[*]['metadata.name', 'metadata.namespace']}"
+kubectl get pods -A -o jsonpath="{.items[*]['metadata.name', 'metadata.namespace']}{'\n'}"
 
 # 006. Create nginx pod in default namespace and verify nginx pod is running
+kubectl delete po/nginx && \
 kubectl run nginx --restart=Never --image=nginx && \
 kubectl wait --for=condition=Ready po/nginx && \
 kubectl get po/nginx
@@ -68,19 +69,20 @@ kubectl delete pods nginx
 kubectl run nginx --restart=Never --image=nginx && \
 kubectl wait --for=condition=Ready po/nginx && \
 kubectl delete po/nginx --grace-period=0 --force && \
+kubectl wait --for=delete po/nginx && \
 kubectl get po/nginx
 # Answer
 kubectl delete pods nginx --grace-period=0 --force
 
-# 013. Create nginx pod with nginx:1.17.4 image and expose nginx pod on port 80
-kubectl run nginx --restart=Never --image=nginx:1.17.4 --port=80 && \
+# 013. Create nginx pod with nginx:1.17.4 image and expose nginx pod on port 8080
+kubectl run nginx --restart=Never --image=nginx:1.17.4 --port=8080 -- /bin/sh -c "sleep 3600" && \
 kubectl wait --for=condition=Ready po/nginx && \
 kubectl describe po/nginx
 # Answer
-kubectl run nginx --restart=Never --image=nginx:1.17.4 --port=80
+kubectl run nginx --restart=Never --image=nginx:1.17.4 --port=8080
 
 # 014. Update nginx pod with alpine:3.11.3 image and verify image is updated
-kubectl set image po/nginx nginx=alpine:3.11.3 -- /bin/sh -c "sleep 3600" && \
+kubectl set image po/nginx nginx=alpine:3.11.3 && \
 kubectl wait --for=condition=Ready po/nginx && \
 kubectl describe po/nginx
 # Answer
