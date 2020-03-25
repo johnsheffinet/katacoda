@@ -485,15 +485,32 @@ kubectl get deploy webapp --show-labels
 kubectl get rs -l app=webapp
 kubectl get po -l app=webapp
 
-70. Undo the deployment to the previous version 1.17.1 and verify Image has the previous version
+# 070. Undo nginx deployment to nginx:1.17.1 image and verify image is updated
+kubectl rollout undo deploy/nginx && \
+kubectl get deploy/nginx --output=jsonpath="{}"
+# Answer
+kubectl rollout undo deploy webapp
+kubectl describe deploy webapp | grep Image
 
-kubectl rollout undo deploy webappkubectl describe deploy webapp | grep Image
-71. Update the deployment with the image version 1.16.1 and verify the image and also check the rollout history
+# 071. Update nginx deployment with nginx:1.16.1 image and verify image is updated and show rollout history
+kubectl set image deploy/nginx --nginx=nginx:1.16.1 && \
+kubectl rollout status deploy/nginx && \
+kubectl get deploy/nginx --output-jsonpath="{}{'\n'}" && \
+kubectl rollout history deploy/nginx
+# Answer
+kubectl set image deploy/nginx nginx=nginx:1.16.1
+kubectl describe deploy nginx | grep Image
+kubectl rollout history deploy nginx
 
-kubectl set image deploy/webapp nginx=nginx:1.16.1kubectl describe deploy webapp | grep Imagekubectl rollout history deploy webapp
-72. Update the deployment to the Image 1.17.1 and verify everything is ok
+# 072. Update nginx deployment to nginx:1.17.1 image and verify image is updated
+kubectl set image deploy/nginx nginx=nginx:1.17.1 && \
+kubectl rollout status deploy/nginx &&
+kubectl get deploy/nginx --output-jsonpath="{}{'\n'}" && \
+# Answer
+kubectl rollout undo deploy nginx --to-revision=3
+kubectl describe deploy nginx | grep Image
+kubectl rollout status deploy nginx
 
-kubectl rollout undo deploy webapp --to-revision=3kubectl describe deploy webapp | grep Imagekubectl rollout status deploy webapp
 73. Update the deployment with the wrong image version 1.100 and verify something is wrong with the deployment
 
 kubectl set image deploy/webapp nginx=nginx:1.100kubectl rollout status deploy webapp (still pending state)kubectl get pods (ImagePullErr)
