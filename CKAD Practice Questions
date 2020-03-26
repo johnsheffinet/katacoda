@@ -75,11 +75,11 @@ kubectl get po/nginx
 kubectl delete pods nginx --grace-period=0 --force
 
 # 013. Create nginx pod with nginx:1.17.4 image and expose nginx pod on port 8080
-kubectl run nginx --restart=Never --image=nginx:1.17.4 --port=8080 -- /bin/sh -c "sleep 3600" && \
+kubectl run nginx --restart=Never --image=nginx:1.17.4 --port=80 -- /bin/sh -c "sleep 3600" && \
 kubectl wait --for=condition=Ready po/nginx && \
 kubectl describe po/nginx
 # Answer
-kubectl run nginx --restart=Never --image=nginx:1.17.4 --port=8080
+kubectl run nginx --restart=Never --image=nginx:1.17.4 --port=80
 
 # 014. Update nginx pod with alpine:3.11.3 image and verify image is updated
 kubectl set image po/nginx nginx=alpine:3.11.3 && \
@@ -104,7 +104,7 @@ kubectl get po nginx -o jsonpath="{.spec.containers[].image}{'\n'}"
 
 # 017. Create nginx pod and execute shell command
 kubectl delete po/nginx && \
-kubectl run nginx --restart=Never --image=nginx --port=8080 && \
+kubectl run nginx --restart=Never --image=nginx --port=80 && \
 kubectl wait --for=condition=Ready po/nginx && \
 kubectl exec nginx -it -- /bin/sh -c "ls"
 # Answer
@@ -461,7 +461,7 @@ kubectl delete deploy nginx
 kubectl get po -l app=nginx -w
 
 # 067. Create nginx deployment with nginx:1.17.1 image and exposed on port 8080 and verify image is created
-kubectl create deploy nginx --image=nginx:1.17.1 --port=8080 && \
+kubectl create deploy nginx --image=nginx:1.17.1 --port=80 && \
 kubectl rollout status deploy/nginx && \
 kubectl get deploy/nginx --output=jsonpath="{}"
 # Answer
