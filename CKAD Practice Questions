@@ -74,7 +74,7 @@ kubectl get po/nginx
 # Answer
 kubectl delete pods nginx --grace-period=0 --force
 
-# 013. Create nginx pod with nginx:1.17.4 image and expose nginx pod on port 8080
+# 013. Create nginx pod with nginx:1.17.4 image and expose nginx pod on port 80
 kubectl run nginx --restart=Never --image=nginx:1.17.4 --port=80 -- /bin/sh -c "sleep 3600" && \
 kubectl wait --for=condition=Ready po/nginx && \
 kubectl describe po/nginx
@@ -422,7 +422,7 @@ kubectl get deploy/nginx --output=yaml
 kubectl get deploy nginx -o yaml
 
 # 061. List pods for nginx deployment
-kubectl get po --selector="app==nginx"
+kubectl get po --selector="app==nginx" --show-labels
 # Answer
 kubectl get deploy --show-labels
 kubectl get pods -l app=nginx
@@ -430,8 +430,7 @@ kubectl get pods -l app=nginx
 # 062. Scale nginx deployment from 5 replicas to 20 replicas and verify nginx deployment has 20 replicas
 kubectl scale deploy/nginx --replicas=20 && \
 kubectl rollout status deploy/nginx && \
-kubectl get deploy/nginx && \
-kubectl get po --selector="app==nginx" --field-selector=status.phase=Running
+kubectl get deploy/nginx
 # Answer
 kubectl scale deploy nginx --replicas=20
 kubectl get po -l app=nginx
@@ -446,24 +445,25 @@ kubectl get rs --selector="app==nginx"
 # Answer
 kubectl get rs -l app=nginx
 
-# 065. Show yaml file for replicaset and pods of nginx deployment
+# 065. Show yaml file for replicaset and list pods for nginx deployment
 kubectl get rs --selector="app==nginx" --output=yaml && \
 kubectl get po --selector="app==nginx" --output=yaml
 # Answer
 kubectl get rs -l app=nginx -o yaml
 kubectl get po -l app=nginx -o yaml
 
-# 066. Delete nginx deployment and watch all pods being deleted
+# 066. Delete nginx deployment and observe all pods being deleted
 kubectl delete deploy/nginx && \
 kubectl get po --selector="app=nginx" --watch
+kubectl rollout status deploy/nginx
 # Answer
 kubectl delete deploy nginx
 kubectl get po -l app=nginx -w
 
-# 067. Create nginx deployment with nginx:1.17.1 image and exposed on port 8080 and verify image is created
+# 067. Create nginx deployment with nginx:1.17.1 image and expose nginx deployment on port 80 and verify image is correct
 kubectl create deploy nginx --image=nginx:1.17.1 --port=80 && \
 kubectl rollout status deploy/nginx && \
-kubectl get deploy/nginx --output=jsonpath="{}"
+kubectl get deploy/nginx --output=jsonpath="{}{'\n'}"
 # Answer
 kubectl create deploy nginx --image=nginx:1.17.1 --dry-run -o yaml > nginx.yaml
 kubectl create -f nginx.yaml
@@ -472,27 +472,27 @@ kubectl describe deploy nginx | grep Image
 # 068. Update nginx deployment with nginx:1.17.4 image and verify image is updated
 kubectl set image deploy/nginx nginx=nginx:1.17.4 && \
 kubectl rollout status deploy/nginx && \
-kubectl get deploy/nginx --output=jsonpath="{}"
+kubectl get deploy/nginx --output=jsonpath="{}{'\n'}"
 # Answer
 kubectl set image deploy/nginx nginx=nginx:1.17.4
-kubectl describe deploy webapp | grep Image
+kubectl describe deploy nginx | grep Image
 
-# 069. Show rollout history for nginx deployment
+# 069. Show revision history for nginx deployment
 kubectl rollout history deploy/nginx
 # Answer
-kubectl rollout history deploy webapp
-kubectl get deploy webapp --show-labels
-kubectl get rs -l app=webapp
-kubectl get po -l app=webapp
+kubectl rollout history deploy nginx
+kubectl get deploy nginx --show-labels
+kubectl get rs -l app=nginx
+kubectl get po -l app=nginx
 
-# 070. Undo nginx deployment to nginx:1.17.1 image and verify image is updated
+# 070. Undo nginx deployment with nginx:1.17.4 image and verify image is updated
 kubectl rollout undo deploy/nginx && \
-kubectl get deploy/nginx --output=jsonpath="{}"
+kubectl get deploy/nginx --output=jsonpath="{}{'\n'}"
 # Answer
-kubectl rollout undo deploy webapp
-kubectl describe deploy webapp | grep Image
+kubectl rollout undo deploy nginx
+kubectl describe deploy nginx | grep Image
 
-# 071. Update nginx deployment with nginx:1.16.1 image and verify image is updated and show rollout history
+# 071. Update nginx deployment with nginx:1.16.1 image and verify image is updated and show revision history
 kubectl set image deploy/nginx --nginx=nginx:1.16.1 && \
 kubectl rollout status deploy/nginx && \
 kubectl get deploy/nginx --output-jsonpath="{}{'\n'}" && \
@@ -502,56 +502,101 @@ kubectl set image deploy/nginx nginx=nginx:1.16.1
 kubectl describe deploy nginx | grep Image
 kubectl rollout history deploy nginx
 
-# 072. Update nginx deployment to nginx:1.17.1 image and verify image is updated
+# 072. Update nginx deployment with nginx:1.17.1 image and verify image is updated
 kubectl set image deploy/nginx nginx=nginx:1.17.1 && \
 kubectl rollout status deploy/nginx &&
-kubectl get deploy/nginx --output-jsonpath="{}{'\n'}" && \
+kubectl get deploy/nginx --output-jsonpath="{}{'\n'}"
 # Answer
 kubectl rollout undo deploy nginx --to-revision=3
 kubectl describe deploy nginx | grep Image
 kubectl rollout status deploy nginx
 
-73. Update the deployment with the wrong image version 1.100 and verify something is wrong with the deployment
+# 073. Update nginx deployment with nginx:1.100 image and verify image is not updated
+kubectl set image deploy/nginx nginx=nginx:1.100 && \
+kubectl rollout status deploy/nginx && \
+kubectl get deploy/nginx && \
+kubectl describe deploy/nginx
+# Answer
+kubectl set image deploy/nginx nginx=nginx:1.100
+kubectl rollout status deploy nginx
+kubectl get pods
 
-kubectl set image deploy/webapp nginx=nginx:1.100kubectl rollout status deploy webapp (still pending state)kubectl get pods (ImagePullErr)
-74. Undo the deployment with the previous version and verify everything is Ok
+# 074. Undo nginx deployment and verify ngix deployment is running
+kubectl rollout undo deploy/nginx && \
+kubectl rollout status deploy/nginx && \
+kubectl get deploy/nginx
+# Answer
+kubectl rollout undo deploy nginx
+kubectl rollout status deploy nginx
+kubectl get pods
 
-kubectl rollout undo deploy webapp
-kubectl rollout status deploy webappkubectl get pods
-75. Check the history of the specific revision of that deployment
+# 075. Show specific revision for nginx deployment
+kubectl rollout history deploy/nginx --revision=7
+# Answer
+kubectl rollout history deploy nginx --revision=7
 
-kubectl rollout history deploy webapp --revision=7
-76. Pause the rollout of the deployment
+# 076. Pause nginx deployment
+kubectl rollout undo deploy/nginx --to-revision=2 && \
+kubectl rollout pause deploy/nginx && \
+kubectl rollout status deploy/nginx
+# Answer
+kubectl rollout pause deploy nginx
 
-kubectl rollout pause deploy webapp
-77. Update the deployment with the image version latest and check the history and verify nothing is going on
+# 077. Update nginx deployment with nginx:latest image and show revision history and verify update is not occuring
+kubectl set image deploy/nginx nginx=nginx:latest && \
+kubectl rollout status deploy/nginx && \
+kubectl rollout history deploy/nginx
+# Answer
+kubectl set image deploy/nginx nginx=nginx:latest
+kubectl rollout history deploy nginx
 
-kubectl set image deploy/webapp nginx=nginx:latestkubectl rollout history deploy webapp (No new revision)
-78. Resume the rollout of the deployment
+# 078. Resume nginx deployment
+kubectl rollout resume deploy/nginx && \
+kubectl rollout status deploy/nginx && \
+kubectl rollout history deploy/nginx
+# Answer
+kubectl rollout resume deploy nginx
 
-kubectl rollout resume deploy webapp
-79. Check the rollout history and verify it has the new version
+# 079. Show revision history and verify image is updated
+kubectl rollout history deploy/nginx
+# Answer
+kubectl rollout history deploy nginx
+kubectl rollout history deploy nginx --revision=9
 
-kubectl rollout history deploy webappkubectl rollout history deploy webapp --revision=9
-80. Apply the autoscaling to this deployment with minimum 10 and maximum 20 replicas and target CPU of 85% and verify hpa is created and replicas are increased to 10 from 1
+# 080. Autoscale nginx deployment between 10 and 20 replicas with target CPU of 85% and verify hpa is created and verify replicas are increased from 1 to 10
+kubectl
+# Answer
 kubectl autoscale deploy webapp --min=10 --max=20 --cpu-percent=85kubectl get hpakubectl get pod -l app=webapp
 
-81. Clean the cluster by deleting deployment and hpa you just created
+# 081. Delete nginx deployment and delete nginx hpa
 
-kubectl delete deploy webappkubectl delete hpa webapp
-82. Create a Job with an image node which prints node version and also verifies there is a pod created for this job
+# Answer
+kubectl delete deploy webapp
+kubectl delete hpa webapp
 
-kubectl create job nodeversion --image=node -- node -vkubectl get job -w
+# 082. Create node job and execute node -v command and verify pod is created
+
+# Answer
+kubectl create job nodeversion --image=node -- node -v
+kubectl get job -w
 kubectl get pod
-83. Get the logs of the job just created
 
-kubectl logs <pod name> // created from the job
-84.Output the yaml file for the Job with the image busybox which echos “Hello I am from job”
+# 083. Show logs for node job
 
+# Answer
+kubectl logs <pod name>
+
+# 084. Show yaml file for busybox jox that executes echo 'Hello I am from job' command 
+
+# Answer
 kubectl create job hello-job --image=busybox --dry-run -o yaml -- echo "Hello I am from job"
-85. Copy the above YAML file to hello-job.yaml file and create the job
 
-kubectl create job hello-job --image=busybox --dry-run -o yaml -- echo "Hello I am from job" > hello-job.yamlkubectl create -f hello-job.yaml
+# 085. Create busybox jox job from busybox.yaml file
+
+# Answer
+kubectl create job hello-job --image=busybox --dry-run -o yaml -- echo "Hello I am from job" > hello-job.yaml
+kubectl create -f hello-job.yaml
+
 86. Verify the job and the associated pod is created and check the logs as well
 
 kubectl get job
