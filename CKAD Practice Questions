@@ -195,7 +195,39 @@ kubectl get po --sort-by=.metadata.creationTimestamp
 # 029. Create busybox pod with three busybox containers each executing "ls; sleep 3600", "echo 'Hello World'; sleep 3600" and "echo 'this is the third container'; sleep 3600" respectively and verify busybox pod is running
 kubectl run busybox --restart=Never --image=busybox --dry-run --output=yaml -- /bin/sh -c "ls; sleep 3600"
 cat << EOF >> busybox.yaml
-
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: busybox
+  name: busybox
+spec:
+  containers:
+  - args:
+    - /bin/sh
+    - -c
+    - ls; sleep 3600
+    image: busybox
+    name: busybox1
+    resources: {}
+  - args:
+    - /bin/sh
+    - -c
+    - echo 'Hello World'; sleep 3600
+    image: busybox
+    name: busybox2
+    resources: {}
+  - args:
+    - /bin/sh
+    - -c
+    - echo 'this is the third container'; sleep 3600
+    image: busybox
+    name: busybox3
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}
 EOF
 kubectl delete po/busybox && \
 kubectl create --filename=busybox.yaml && \
@@ -222,12 +254,12 @@ kubectl logs busybox --container=busybox2 --previous
 kubectl logs busybox -c busybox2 --previous
 
 # 032. Execute ls command in busybox3 container in busybox pod
-kubectl exec busybox --container=busybox3 -it -- ls
+kubectl exec busybox --container=busybox3 -it -- bin/sh -c "ls"
 # Answer
 kubectl exec busybox -c busybox3 -- ls
 
 # 033. Show metrics for all containers in busybox pod with top.log
-minikube addons enable metric-server && \
+minikube addons enable metrics-server && \
 kubectl top po > top.log && \
 cat top.log
 # Answer
@@ -237,7 +269,31 @@ cat file.log
 # 034. Create busybox pod and execute "while true; do echo 'Hi I am from Main container' >> /var/log/index.html; sleep 5; done" command and add nginx container exposed on port 80 and verify all containers in busybox pod are running
 kubectl run busybox --restart=Never --image=busybox --port=80 --dry-run --output=yaml -- /bin/sh -c "while true; do echo 'Hi I am from Main container' >> /var/log/index.html; sleep 5; done"
 cat << EOF >> busybox.yaml
-
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: busybox
+  name: busybox
+spec:
+  containers:
+  - args:
+    - /bin/sh
+    - -c
+    - while true; do echo 'Hi I am from Main container' >> /var/log/index.html; sleep
+      5; done
+    image: busybox
+    name: busybox
+    resources: {}
+  - image: nginx
+    name: nginx
+    ports:
+    - containerPort: 80
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}
 EOF
 kubectl delete po/busybox && \
 kubectl create --filename=busybox.yaml && \
@@ -250,9 +306,9 @@ kubectl create -f busybox.yaml
 kubectl get po busybox
 
 # 035. Verify main.txt exists in busybox container and show index.html in nginx container
-kubectl exec busybox --container=busybox -it -- /bin/sh -c "ls /var/log/main.txt" && \
-export POD_IP=$(kubectl get po/busybox --output=jsonpath="{") && \
-export POD_PORT=$(kubectl get po/busybox --output=jsonpath="{}") && \
+# kubectl exec busybox --container=busybox -it -- /bin/sh -c "ls /var/log/main.txt" && \
+export POD_IP=$(kubectl get po/busybox --output=jsonpath="{.status.podIP}{'\n'}") && \
+export POD_PORT=$(kubectl get po/busybox --output=jsonpath="{.spec.containers[?(@.name=='nginx')].ports[0].containerPort}{'\n'}") && \
 echo $POD_IP:$POD_PORT && \
 kubectl exec busybox -it -- /bin/sh -c "wget -O- $POD_IP:$POD_PORT"
 # Answer
@@ -271,8 +327,8 @@ kubectl get pods --show-labels
 kubectl run nginx-dev1 --restart=Never --image=nginx --labels="env=dev" && \
 kubectl run nginx-dev2 --restart=Never --image=nginx --labels="env=dev" && \
 kubectl run nginx-dev3 --restart=Never --image=nginx --labels="env=dev" && \
-kubectl run nginx-prd1 --restart=Never --image-nginx --labels="env=prd" && \
-kubectl run nginx-prd2 --restart=Never --image-nginx --labels="env=prd"
+kubectl run nginx-prd1 --restart=Never --image=nginx --labels="env=prd" && \
+kubectl run nginx-prd2 --restart=Never --image=nginx --labels="env=prd"
 # Answer
 kubectl run nginx-dev1 --image=nginx --restart=Never --labels=env=dev
 kubectl run nginx-dev2 --image=nginx --restart=Never --labels=env=dev
@@ -281,7 +337,7 @@ kubectl run nginx-prd1 --image=nginx --restart=Never --labels=env=prd
 kubectl run nginx-prd2 --image=nginx --restart=Never --labels=env=prd
 
 # 038. Verify all nginx pods are running with correct labels
-kubectl get po --selector="run==nginx" --field-selector=status.phase==Running --show-labels
+kubectl get po --selector="env" --field-selector=status.phase==Running --show-labels
 # Answer
 kubeclt get pods --show-labels
 
@@ -311,32 +367,32 @@ kubectl get po --selector="env" --show-labels
 kubectl get pods -l env
 
 # 044. List pods with env=dev or env=prod labels
-kubectl get po --selector="env in (dev,prod)"
+kubectl get po --selector="env in (dev,prd)"
 # Answer
 kubectl get pods -l 'env in (dev,prod)'
 
 # 045. Show labels for pods with env=dev or env=prod labels
-kubectl get po --selector="env in (dev,prod)" --show-labels
+kubectl get po --selector="env in (dev,prd)" --show-labels
 # Answer
 kubectl get pods -l 'env in (dev,prod)' --show-labels
 
 # 046. Update nginx-dev3 pod with env=uat label and verify label is updated
-kubectl label po/nginx-dev3 env=uat && \
+kubectl label po/nginx-dev3 env=uat --overwrite && \
 kubectl get po/nginx-dev3 --show-labels
 # Answer
 kubectl label pod/nginx-dev3 env=uat --overwrite
 kubectl get pods --show-labels
 
 # 047. Remowe all env labels from all nginx pods and verify all env labels are removed from all nginx pods
-kubectl label po/nginx-dev{1..3},po/nginx-prd{1..2} env- && \
-kubectl get po/nginx-dev{1..3},po/nginx-prd{1..2} --show-labels
+kubectl label po/nginx-dev{1..3} po/nginx-prd{1..2} env- && \
+kubectl get po/nginx-dev{1..3} po/nginx-prd{1..2} --show-labels
 # Answer
 kubectl label pod nginx-dev{1..3} env-
 kubectl label pod nginx-prod{1..2} env-
 kubectl get po --show-labels
 
 # 048. Add app=nginx label to all nginx pods and verify app=nginx label is added to all nginx pods
-kubectl label po/nginx-dev{1..3},po/nginx-pro{1..2} app=nginx && \
+kubectl label po/nginx-dev{1..3} po/nginx-prd{1..2} app=nginx && \
 kubectl get po --selector="app==nginx" --show-labels
 # Answer
 kubectl label pod nginx-dev{1..3} app=nginx
@@ -357,7 +413,40 @@ kubectl label node minikube nodeName=nginxnode
 # 051. Create nginx pod on node with nodeName=nginxnode label
 kubectl run nginx --restart=Never --image=nginx --dry-run --output=yaml
 cat << EOF >> nginx.yaml
-
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: nodeName
+            operator: In
+            values:
+            - nginxnode
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 1
+        preference:
+          matchExpressions:
+          - key: nodeName
+            operator: In
+            values:
+            - nginxnode
+  containers:
+  - image: nginx
+    name: nginx
+    resources: {}
+#  nodeSelector:
+#    nodeName: nginxnode
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}
 EOF
 kubectl delete po/nginx && \
 kubectl create --filename=nginx.yaml && \
@@ -378,13 +467,13 @@ kubectl describe po/nginx | grep "Node-Selectors"
 kubectl describe po nginx | grep Labels
 
 # 054. Annotate all nginx pods with name=webapp annotation
-kubectl annotate po/nginx-dev{1..3},po/nginx-prd{1..2} name=webapp
+kubectl annotate po/nginx-dev{1..3} po/nginx-prd{1..2} name=webapp
 # Answer
 kubectl annotate pod nginx-dev{1..3} name=webapp
 kubectl annotate pod nginx-prd{1..2} name=webapp
 
 # 055. Verify all nginx pods have name=webapp annotation
-kubectl get po/nginx-dev{1..3},po/nginx-prd{1..2} --output=jsonpath="{}"
+kubectl get po/nginx-dev{1..3} po/nginx-prd{1..2} --output=jsonpath="{}"
 # Answer
 kubectl describe po nginx-dev{1..3} | grep -i annotations
 kubectl describe po nginx-prod{1..2} | grep -i annotations
