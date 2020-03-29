@@ -480,7 +480,7 @@ kubectl describe po nginx-prod{1..2} | grep -i annotations
 
 # 056. Remove all annotations on nginx pods and verify all annotations on nginx pods are removed
 kubectl annotate nginx-dev{1..3},po/nginx-prd{1..2} name- && \
-kubectl get po/nginx-dev{1..3},po/nginx-prd{1..2} --output=jsonpath="{}"
+kubectl get po/nginx-dev{1..3} po/nginx-prd{1..2} --output=jsonpath="{.items[*].metadata.annotations}{'\n'}"
 # Answer
 kubectl annotate pod nginx-dev{1..3} name-
 kubectl annotate pod nginx-prod{1..2} name-
