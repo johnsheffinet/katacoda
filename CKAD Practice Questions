@@ -281,16 +281,24 @@ spec:
   - args:
     - /bin/sh
     - -c
-    - while true; do echo 'Hi I am from Main container' >> /var/log/index.html; sleep
-      5; done
+    - while true; do echo 'Hi I am from Main container' >> /var/log/index.html; sleep 5; done
     image: busybox
     name: busybox
     resources: {}
+    volumeMounts:
+    - name: log-vol
+      mountPath: /var/log
   - image: nginx
     name: nginx
     ports:
     - containerPort: 80
     resources: {}
+    volumeMounts:
+    - name: log-vol
+      mountPath: /usr/share/nginx/html
+  volumes:
+  - name: log-vol
+    emptyDir: {}
   dnsPolicy: ClusterFirst
   restartPolicy: Never
 status: {}
@@ -306,11 +314,11 @@ kubectl create -f busybox.yaml
 kubectl get po busybox
 
 # 035. Verify main.txt exists in busybox container and show index.html in nginx container
-# kubectl exec busybox --container=busybox -it -- /bin/sh -c "ls /var/log/main.txt" && \
+kubectl exec busybox --container=busybox -it -- /bin/sh -c "ls /var/log/index.html" && \
 export POD_IP=$(kubectl get po/busybox --output=jsonpath="{.status.podIP}{'\n'}") && \
 export POD_PORT=$(kubectl get po/busybox --output=jsonpath="{.spec.containers[?(@.name=='nginx')].ports[0].containerPort}{'\n'}") && \
 echo $POD_IP:$POD_PORT && \
-kubectl exec busybox -it -- /bin/sh -c "wget -O- $POD_IP:$POD_PORT"
+kubectl exec busybox --container=busybox -it -- /bin/sh -c "wget -O- $POD_IP:$POD_PORT"
 # Answer
 kubectl exec busybox -c busybox -it -- sh cat /var/log/main.txt
 kubectl exec busybox -c nginx -it -- sh cat /usr/share/nginx/html/index.html
