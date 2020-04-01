@@ -286,16 +286,16 @@ spec:
     name: busybox
     resources: {}
     volumeMounts:
-    - name: log-vol
-      mountPath: /var/log
+    - mountPath: /var/log
+      name: log-vol
   - image: nginx
     name: nginx
     ports:
     - containerPort: 80
     resources: {}
     volumeMounts:
-    - name: log-vol
-      mountPath: /usr/share/nginx/html
+    - mountPath: /usr/share/nginx/html
+      name: log-vol
   volumes:
   - name: log-vol
     emptyDir: {}
@@ -429,29 +429,12 @@ metadata:
     run: nginx
   name: nginx
 spec:
-  affinity:
-    nodeAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-        nodeSelectorTerms:
-        - matchExpressions:
-          - key: nodeName
-            operator: In
-            values:
-            - nginxnode
-      preferredDuringSchedulingIgnoredDuringExecution:
-      - weight: 1
-        preference:
-          matchExpressions:
-          - key: nodeName
-            operator: In
-            values:
-            - nginxnode
   containers:
   - image: nginx
     name: nginx
     resources: {}
-#  nodeSelector:
-#    nodeName: nginxnode
+  nodeSelector:
+    nodeName: nginxnode
   dnsPolicy: ClusterFirst
   restartPolicy: Never
 status: {}
