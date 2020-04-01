@@ -644,18 +644,31 @@ kubectl rollout history deploy nginx
 kubectl rollout history deploy nginx --revision=9
 
 # 080. Autoscale nginx deployment between 10 and 20 replicas with target CPU of 85% and verify hpa is created and verify replicas are increased from 1 to 10
-kubectl
+kubectl run nginx --restart=Always --image=nginx --port=80 --dry-run --output=yaml
+cat << EOF >> nginx.yaml
+
+EOF
+kubectl create --filename=nginx.yaml && \
+kubectl rollout status deploy/nginx && \
+kubectl autoscale deploy/nginx --cpu-percent=85 --min=10 --max=20 && \
+kubectl get hpa/nginx && \
+kubectl get deploy/nginx --watch
+kubectl run --generator=run-pod/v1 -it --rm load-generator --image=busybox /bin/sh
+while true; do wget -q -O- http://php-apache.default.svc.cluster.local; done
 # Answer
-kubectl autoscale deploy webapp --min=10 --max=20 --cpu-percent=85kubectl get hpakubectl get pod -l app=webapp
+kubectl autoscale deploy nginx --cpu-percent=85 --min=10 --max=20 
+kubectl get hpa
+kubectl get pod -l app=nginx
 
 # 081. Delete nginx deployment and delete nginx hpa
-
+kubectl delete deploy/nginx hpa/nginx && \
+kubectl get deploy/nginx hpa/nginx
 # Answer
-kubectl delete deploy webapp
-kubectl delete hpa webapp
+kubectl delete deploy nginx
+kubectl delete hpa nginx
 
 # 082. Create node job and execute node -v command and verify pod is created
-
+kubectl create deploy/node --image-node --
 # Answer
 kubectl create job nodeversion --image=node -- node -v
 kubectl get job -w
