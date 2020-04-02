@@ -643,49 +643,91 @@ kubectl rollout history deploy/nginx
 kubectl rollout history deploy nginx
 kubectl rollout history deploy nginx --revision=9
 
-# 080. Autoscale nginx deployment between 10 and 20 replicas with target CPU of 85% and verify hpa is created and verify replicas are increased from 1 to 10
-kubectl run nginx --restart=Always --image=nginx --port=80 --dry-run --output=yaml
-cat << EOF >> nginx.yaml
+# 080. Autoscale php-apache deployment between 10 and 20 replicas with target CPU of 85% and verify hpa is created and verify replicas are increased from 1 to 10
+cat << EOF >> php-apache.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: php-apache
+spec:
+  selector:
+    matchLabels:
+      run: php-apache
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        run: php-apache
+    spec:
+      containers:
+      - name: php-apache
+        image: k8s.gcr.io/hpa-example
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: 500m
+          requests:
+            cpu: 200m
 
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: php-apache
+  labels:
+    run: php-apache
+spec:
+  ports:
+  - port: 80
+  selector:
+    run: php-apache
 EOF
-kubectl create --filename=nginx.yaml && \
-kubectl rollout status deploy/nginx && \
-kubectl autoscale deploy/nginx --cpu-percent=85 --min=10 --max=20 && \
-kubectl get hpa/nginx && \
-kubectl get deploy/nginx --watch
-kubectl run --generator=run-pod/v1 -it --rm load-generator --image=busybox /bin/sh
-while true; do wget -q -O- http://php-apache.default.svc.cluster.local; done
-# Answer
-kubectl autoscale deploy nginx --cpu-percent=85 --min=10 --max=20 
-kubectl get hpa
-kubectl get pod -l app=nginx
+kubectl create --filename=php-apache.yaml && \
+kubectl rollout status deploy/php-apache && \
+kubectl autoscale deploy/php-apache --cpu-percent=85 --min=10 --max=20 && \
+kubectl get deploy/php-apache --watch
 
-# 081. Delete nginx deployment and delete nginx hpa
-kubectl delete deploy/nginx hpa/nginx && \
-kubectl get deploy/nginx hpa/nginx
+export SVC_IP=$(kubectl get svc/php-apache --output=jsonpath="{}") && \
+export SVC_PORT=$(kubectl get svc/php-apache --output=jsonpath="{}") && \
+echo $SVC_IP:$SVC_PORT && \
+kubectl run load-generator --generator=run-pod/v1 --image=busybox -- /bin/sh -c "while true; do wget -q -O- http://$SVC_IP:$SVC_PORT; done" && \
+kubectl get hpa/php-apache --watch
+kubectl delete po/load-generator
 # Answer
-kubectl delete deploy nginx
-kubectl delete hpa nginx
+kubectl autoscale deploy php-apache --cpu-percent=85 --min=10 --max=20 
+kubectl get hpa
+kubectl get pod -l app=php-apache
+
+# 081. Delete php-apache deployment and delete php-apache hpa
+kubectl delete deploy/php-apache hpa/php-apache && \
+kubectl get deploy/php-apache hpa/php-apache
+# Answer
+kubectl delete deploy php-apache
+kubectl delete hpa php-apache
 
 # 082. Create node job and execute node -v command and verify pod is created
-kubectl create deploy/node --image-node --
+kubectl create node --image=node -- /bin/sh -c "node -v" && \
+kubectl get jobs/node
 # Answer
 kubectl create job nodeversion --image=node -- node -v
 kubectl get job -w
 kubectl get pod
 
 # 083. Show logs for node job
-
+kubectl logs jobs/node
 # Answer
 kubectl logs <pod name>
 
-# 084. Show yaml file for busybox jox that executes echo 'Hello I am from job' command 
-
+# 084. Show yaml file for busybox job and execute echo 'Hello I am from job' command 
+kubectl create job busybox --image=busybox --dry-run --output=yaml -- /bin/sh - c "echo 'Hello I am from job'" > busybox.yaml
 # Answer
 kubectl create job hello-job --image=busybox --dry-run -o yaml -- echo "Hello I am from job"
 
-# 085. Create busybox jox job from busybox.yaml file
-
+# 085. Create busybox job from busybox.yaml file
+kubectl create --filename=busybox.yaml && \
+kubectl get jobs/busybox
 # Answer
 kubectl create job hello-job --image=busybox --dry-run -o yaml -- echo "Hello I am from job" > hello-job.yaml
 kubectl create -f hello-job.yaml
