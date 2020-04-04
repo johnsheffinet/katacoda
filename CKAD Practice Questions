@@ -708,88 +708,111 @@ kubectl delete deploy php-apache
 kubectl delete hpa php-apache
 
 # 082. Create node job and execute node -v command and verify pod is created
-kubectl create node --image=node -- /bin/sh -c "node -v" && \
-kubectl get jobs/node
+kubectl create job node --image=node -- /bin/sh -c "node -v" && \
+kubectl get job/node
 # Answer
 kubectl create job nodeversion --image=node -- node -v
 kubectl get job -w
 kubectl get pod
 
 # 083. Show logs for node job
-kubectl logs jobs/node
+kubectl logs node
 # Answer
 kubectl logs <pod name>
 
 # 084. Show yaml file for busybox job and execute echo 'Hello I am from job' command 
-kubectl create job busybox --image=busybox --dry-run --output=yaml -- /bin/sh - c "echo 'Hello I am from job'" > busybox.yaml
+kubectl create job busybox --image=busybox --dry-run --output=yaml -- /bin/sh -c "echo 'Hello I am from job'" > busybox.yaml
 # Answer
 kubectl create job hello-job --image=busybox --dry-run -o yaml -- echo "Hello I am from job"
 
 # 085. Create busybox job from busybox.yaml file
 kubectl create --filename=busybox.yaml && \
-kubectl get jobs/busybox
+kubectl get job/busybox
 # Answer
 kubectl create job hello-job --image=busybox --dry-run -o yaml -- echo "Hello I am from job" > hello-job.yaml
 kubectl create -f hello-job.yaml
 
-86. Verify the job and the associated pod is created and check the logs as well
+# 086. Verify busybox job and pod are created and show busybox logs
 
+# Answer
 kubectl get job
 kubectl get pokubectl logs hello-job-*
-87. Delete the job we just created
 
+# 087. Delete busybox job
+
+# Answer
 kubectl delete job hello-job
-88. Create the same job and make it run 10 times one after one
 
+# 088. Create busybox job and run busybox job run 10 times
+
+# Answer
 kubectl create job hello-job --image=busybox --dry-run -o yaml -- echo "Hello I am from job" > hello-job.yaml// edit the yaml file to add completions: 10
 kubectl create -f hello-job.yaml
-hello-job.yaml
-89. Watch the job that runs 10 times one by one and verify 10 pods are created and delete those after it’s completed
 
+# 089. Watch busybox job and verify 10 pods are created and delete busybox pods
+
+# Answer
 kubectl get job -w
 kubectl get pokubectl delete job hello-job
-90. Create the same job and make it run 10 times parallel
 
+# 090. Create the same job and make it run 10 times parallel
+
+# Answer
 kubectl create job hello-job --image=busybox --dry-run -o yaml -- echo "Hello I am from job" > hello-job.yaml// edit the yaml file to add parallelism: 10
 kubectl create -f hello-job.yaml
-hello-job.yaml
-91. Watch the job that runs 10 times parallelly and verify 10 pods are created and delete those after it’s completed
 
+# 091. Watch the job that runs 10 times parallelly and verify 10 pods are created and delete those after it’s completed
+
+# Answer
 kubectl get job -w
 kubectl get pokubectl delete job hello-job
-92. Create a Cronjob with busybox image that prints date and hello from kubernetes cluster message for every minute
 
+# 092. Create a Cronjob with busybox image that prints date and hello from kubernetes cluster message for every minute
+
+# Answer
 kubectl create cronjob date-job --image=busybox --schedule="*/1 * * * *" -- bin/sh -c "date; echo Hello from kubernetes cluster"
-93. Output the YAML file of the above cronjob
 
+# 093. Output the YAML file of the above cronjob
+
+# Answer
 kubectl get cj date-job -o yaml
-94. Verify that CronJob creating a separate job and pods for every minute to run and verify the logs of the pod
 
+# 094. Verify that CronJob creating a separate job and pods for every minute to run and verify the logs of the pod
+
+# Answer
 kubectl get job
 kubectl get pokubectl logs date-job-<jobid>-<pod>
-95. Delete the CronJob and verify all the associated jobs and pods are also deleted.
 
+# 095. Delete the CronJob and verify all the associated jobs and pods are also deleted.
+
+# Answer
 kubectl delete cj date-job// verify pods and jobs
 kubectl get po
 kubectl get job
 kubectl autoscale deploy webapp --min=10 --max=20 --cpu-percent=85kubectl get hpakubectl get pod -l app=webapp
 
-echo ===> State Persistence (8%)
-96. List Persistent Volumes in the cluster
+# State Persistence (8%)
+# 096. List Persistent Volumes in the cluster
 
+# Answer
 kubectl get pv
-97. Create a hostPath PersistentVolume named task-pv-volume with storage 10Gi, access modes ReadWriteOnce, storageClassName manual, and volume at /mnt/data and verify
 
+# 097. Create a hostPath PersistentVolume named task-pv-volume with storage 10Gi, access modes ReadWriteOnce, storageClassName manual, and volume at /mnt/data and verify
+
+# Answer
 kubectl create -f task-pv-volume.yamlkubectl get pv
-task-pv-volume.yaml
-98. Create a PersistentVolumeClaim of at least 3Gi storage and access mode ReadWriteOnce and verify status is Bound
 
+# 098. Create a PersistentVolumeClaim of at least 3Gi storage and access mode ReadWriteOnce and verify status is Bound
+
+# Answer
 kubectl create -f task-pv-claim.yamlkubectl get pvc
-task-pv-claim.yaml
-99. Delete persistent volume and PersistentVolumeClaim we just created
 
+# 099. Delete persistent volume and PersistentVolumeClaim we just created
+
+# Answer
 kubectl delete pvc task-pv-claim
 kubectl delete pv task-pv-volume
+
 100. Create a Pod with an image Redis and configure a volume that lasts for the lifetime of the Pod
 
 // emptyDir is the volume that lasts for the life of the podkubectl create -f redis-storage.yaml
