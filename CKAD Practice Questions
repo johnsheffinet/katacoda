@@ -707,23 +707,24 @@ kubectl get deploy/php-apache hpa/php-apache
 kubectl delete deploy php-apache
 kubectl delete hpa php-apache
 
-# 082. Create node job and execute node -v command and verify pod is created
+# 082. Create node job that runs node -v command and verify pod is created
 kubectl create job node --image=node -- /bin/sh -c "node -v" && \
-kubectl get job/node
+kubectl get po --selector=="job-name=node"
 # Answer
-kubectl create job nodeversion --image=node -- node -v
+kubectl create job node --image=node -- node -v
 kubectl get job -w
 kubectl get pod
 
 # 083. Show logs for node job
-kubectl logs node
+kubectl logs po --selector=="job-name=node"
 # Answer
 kubectl logs <pod name>
 
-# 084. Show yaml file for busybox job and execute echo 'Hello I am from job' command 
-kubectl create job busybox --image=busybox --dry-run --output=yaml -- /bin/sh -c "echo 'Hello I am from job'" > busybox.yaml
+# 084. Show yaml file for busybox job that runs "echo 'Hello I am from job'" command 
+kubectl create job busybox --image=busybox --dry-run --output=yaml -- /bin/sh -c "echo 'Hello I am from job'" > busybox.yaml &&
+cat busybox.yaml
 # Answer
-kubectl create job hello-job --image=busybox --dry-run -o yaml -- echo "Hello I am from job"
+kubectl create job busybox --image=busybox --dry-run -o yaml -- echo 'Hello I am from job'
 
 # 085. Create busybox job from busybox.yaml file
 kubectl create --filename=busybox.yaml && \
@@ -733,21 +734,25 @@ kubectl create job hello-job --image=busybox --dry-run -o yaml -- echo "Hello I 
 kubectl create -f hello-job.yaml
 
 # 086. Verify busybox job and pod are created and show busybox logs
-
+kubectl get job/busybox && \
+kubectl get po --selector=="job-name=busybox" && \
+kubectl logs po --selector=="job-name=busybox"
 # Answer
 kubectl get job
-kubectl get pokubectl logs hello-job-*
+kubectl get po
+kubectl logs busybox
 
 # 087. Delete busybox job
-
+kubectl delete job/busybox
 # Answer
-kubectl delete job hello-job
+kubectl delete job busybox
 
-# 088. Create busybox job and run busybox job run 10 times
-
+# 088. Create busybox job that runs 10 times
+kubectl create job busybox --image=busybox 
 # Answer
-kubectl create job hello-job --image=busybox --dry-run -o yaml -- echo "Hello I am from job" > hello-job.yaml// edit the yaml file to add completions: 10
-kubectl create -f hello-job.yaml
+kubectl create job busybox --image=busybox --dry-run -o yaml -- echo "Hello I am from job" > hello-job.yaml
+// edit the yaml file to add completions: 10
+kubectl create -f busybox.yaml
 
 # 089. Watch busybox job and verify 10 pods are created and delete busybox pods
 
