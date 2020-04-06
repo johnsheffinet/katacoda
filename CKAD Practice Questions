@@ -730,8 +730,8 @@ kubectl create job busybox --image=busybox --dry-run -o yaml -- echo 'Hello I am
 kubectl create --filename=busybox.yaml && \
 kubectl get job/busybox
 # Answer
-kubectl create job hello-job --image=busybox --dry-run -o yaml -- echo "Hello I am from job" > hello-job.yaml
-kubectl create -f hello-job.yaml
+kubectl create job busybox --image=busybox --dry-run -o yaml -- echo "Hello I am from job" > busybox.yaml
+kubectl create -f busybox
 
 # 086. Verify busybox job and pod are created and show busybox logs
 kubectl get job/busybox && \
@@ -747,8 +747,38 @@ kubectl delete job/busybox
 # Answer
 kubectl delete job busybox
 
-# 088. Create busybox job that runs "echo 'Hello I am from job'" 10 times
+# 088. Create busybox job that runs "echo 'Hello I am from job'" command 10 times
 kubectl create job busybox --image=busybox --dry-run --output=yaml -- bin/sh -c "echo 'Hello I am from job'"
+cat << EOF >> busybox.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: busybox
+spec:
+  completions: 10
+  template:
+    spec:
+      containers:
+      - name: busybox
+        image: busybox
+        command: ["bin/sh",  "-c", "echo 'Hello I am from job'"]
+      restartPolicy: Never
+EOF
+kubectl create --filename=busybox.yaml && \
+kubectl get jobs/busybox --watch
+# Answer
+kubectl create job busybox --image=busybox --dry-run -o yaml -- echo "Hello I am from job" > busybox.yaml
+kubectl create -f busybox.yaml
+
+# 089. Watch busybox job and verify 10 pods are created and delete busybox pods
+kubectl delete jobs/busybox && \
+kubectl get jobs/busybox
+# Answer
+kubectl get job -w
+kubectl get po
+kubectl delete job busybox
+
+# 090. Create busybox job that runs "echo 'Hello I am from job'" command 10 times in parallel
 cat << EOF >> busybox.yaml
 apiVersion: batch/v1
 kind: Job
@@ -761,53 +791,58 @@ spec:
     spec:
       containers:
       - name: busybox
-        image: perl
+        image: busybox
         command: ["bin/sh",  "-c", "echo 'Hello I am from job'"]
       restartPolicy: Never
 EOF
-kubectl delete jobs/busybox && \
 kubectl apply --filename=busybox.yaml && \
-kubectl get job/busybox --watch
+kubectl get jobs/busybox --watch
 # Answer
-kubectl create job busybox --image=busybox --dry-run -o yaml -- echo "Hello I am from job" > hello-job.yaml
-// edit the yaml file to add completions: 10
+kubectl create job busybox --image=busybox --dry-run -o yaml -- echo "Hello I am from job" > busybox.yaml
 kubectl create -f busybox.yaml
 
-# 089. Watch busybox job and verify 10 pods are created and delete busybox pods
-
+# 091. Watch busybox job and verify 10 pods are created and delete busybox pods
+kubectl delete jobs/busybox && \
+kubectl get po --selector=="job-name=busybox"
 # Answer
 kubectl get job -w
-kubectl get pokubectl delete job hello-job
+kubectl get po
+kubectl delete job busybox
 
-# 090. Create the same job and make it run 10 times parallel
-
+# 092. Create busybox cronjob that runs "echo '$(date) hello from kubernetes cluster'" command every minute
+cat << EOF >> busybox.yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: busybox
+spec:
+  schedule: "*/1 * * * *"
+  template:
+    spec:
+      containers:
+      - name: busybox
+        image: busybox
+        command: ["bin/sh",  "-c", "echo '$(date) hello from kubernetes cluster'"]
+      restartPolicy: Never
+EOF
+kubectl create --filename=busybox.yaml && \
+kubectl logs po --selector=="job-name=busybox"
 # Answer
-kubectl create job hello-job --image=busybox --dry-run -o yaml -- echo "Hello I am from job" > hello-job.yaml// edit the yaml file to add parallelism: 10
-kubectl create -f hello-job.yaml
-
-# 091. Watch the job that runs 10 times parallelly and verify 10 pods are created and delete those after it’s completed
-
-# Answer
-kubectl get job -w
-kubectl get pokubectl delete job hello-job
-
-# 092. Create a Cronjob with busybox image that prints date and hello from kubernetes cluster message for every minute
-
-# Answer
-kubectl create cronjob date-job --image=busybox --schedule="*/1 * * * *" -- bin/sh -c "date; echo Hello from kubernetes cluster"
+kubectl create cronjob busybox --image=busybox --schedule="*/1 * * * *" -- bin/sh -c "date; echo Hello from kubernetes cluster"
 
 # 093. Output the YAML file of the above cronjob
 
 # Answer
 kubectl get cj date-job -o yaml
 
-# 094. Verify that CronJob creating a separate job and pods for every minute to run and verify the logs of the pod
+# 094. Verify busybox cronjob created busybox job and pods every minute and show logs
 
 # Answer
 kubectl get job
-kubectl get pokubectl logs date-job-<jobid>-<pod>
+kubectl get po
+kubectl logs date-job-<jobid>-<pod>
 
-# 095. Delete the CronJob and verify all the associated jobs and pods are also deleted.
+# 095. Delete busybox cronjob and verify busybox job and pods are deleted
 
 # Answer
 kubectl delete cj date-job// verify pods and jobs
@@ -816,6 +851,7 @@ kubectl get job
 kubectl autoscale deploy webapp --min=10 --max=20 --cpu-percent=85kubectl get hpakubectl get pod -l app=webapp
 
 # State Persistence (8%)
+
 # 096. List Persistent Volumes in the cluster
 
 # Answer
