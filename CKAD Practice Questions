@@ -747,8 +747,27 @@ kubectl delete job/busybox
 # Answer
 kubectl delete job busybox
 
-# 088. Create busybox job that runs 10 times
-kubectl create job busybox --image=busybox 
+# 088. Create busybox job that runs "echo 'Hello I am from job'" 10 times
+kubectl create job busybox --image=busybox --dry-run --output=yaml -- bin/sh -c "echo 'Hello I am from job'"
+cat << EOF >> busybox.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: busybox
+spec:
+  completions: 10
+  parallelism: 2
+  template:
+    spec:
+      containers:
+      - name: busybox
+        image: perl
+        command: ["bin/sh",  "-c", "echo 'Hello I am from job'"]
+      restartPolicy: Never
+EOF
+kubectl delete jobs/busybox && \
+kubectl apply --filename=busybox.yaml && \
+kubectl get job/busybox --watch
 # Answer
 kubectl create job busybox --image=busybox --dry-run -o yaml -- echo "Hello I am from job" > hello-job.yaml
 // edit the yaml file to add completions: 10
