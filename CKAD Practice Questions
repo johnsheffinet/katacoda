@@ -852,30 +852,88 @@ kubectl autoscale deploy webapp --min=10 --max=20 --cpu-percent=85kubectl get hp
 
 # State Persistence (8%)
 
-# 096. List Persistent Volumes in the cluster
-
+# 096. List all persistent volumes in the cluster
+kubectl get pv --all-namespaces
 # Answer
 kubectl get pv
 
-# 097. Create a hostPath PersistentVolume named task-pv-volume with storage 10Gi, access modes ReadWriteOnce, storageClassName manual, and volume at /mnt/data and verify
-
+# 097. Create task-pv-volume persistent volume with manual storage class name, 10Gi storage capacity, ReadWriteOnce access modes, hostPath volume and /mnt/data path and verify
+cat << EOF >> task-pv-volume.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: task-pv-volume
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+EOF
+mkdir /mnt/data && \
+ls -ld /mnt/data/ && \
+kubectl create --filename=task-pv-volume.yaml && \
+kubectl get --filename=task-pv-volume.yaml
 # Answer
-kubectl create -f task-pv-volume.yamlkubectl get pv
+kubectl create -f task-pv-volume.yaml
+kubectl get pv
 
-# 098. Create a PersistentVolumeClaim of at least 3Gi storage and access mode ReadWriteOnce and verify status is Bound
-
+# 098. Create task-pv-claim persistent volume claim with manual storage class name, ReadWriteOnce access modes and 3Gi storage request and verify status is bound
+cat << EOF >> task-pv-claim.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: task-pv-claim
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
+EOF
+kubectl create --filename=task-pv-claim.yaml && \
+kubectl get --filename=task-pv-claim.yaml
 # Answer
-kubectl create -f task-pv-claim.yamlkubectl get pvc
+kubectl create -f task-pv-claim.yaml
+kubectl get pvc
 
-# 099. Delete persistent volume and PersistentVolumeClaim we just created
-
+# 099. Delete task-pv-volume persistent volume and task-pv-claim persistent volume claim
+kubectl delete pv/task-pv-claim pvc/task-pv-claim && \
+kubectl pv/task-pv-claim pvc/task-pv-claim
 # Answer
 kubectl delete pvc task-pv-claim
 kubectl delete pv task-pv-volume
 
-100. Create a Pod with an image Redis and configure a volume that lasts for the lifetime of the Pod
-
-// emptyDir is the volume that lasts for the life of the podkubectl create -f redis-storage.yaml
+# 100. Create redis pod with persist volume
+cat << EOF >> busybox.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: redis
+  name: redis
+spec:
+  containers:
+  - image: redis
+    name: redis
+    resources: {}
+    volumeMounts:
+    - mountPath: /var/log
+      name: log-vol
+  volumes:
+  - name: log-vol
+    emptyDir: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}
+EOF
+// emptyDir is the volume that lasts for the life of the pod
+kubectl create -f redis-storage.yaml
 101. Exec into the above pod and create a file named file.txt with the text ‘This is called the file’ in the path /data/redis and open another tab and exec again with the same pod and verifies file exist in the same path.
 
 // first terminal
