@@ -1013,44 +1013,103 @@ key2=value2
 EOF
 cat config.txt
 
-# 110. Create keyvalcfgmap configmap config.txt file and verify
+# 110. Create keyvalcfgmap configmap from config.txt file and verify
 kubectl create cm keyvalcfgmap --from-file=config.txt && \
 kubectl describe cm/keyvalcfgmap
 # Answer
 kubectl create cm keyvalcfgmap --from-file=config.txt
 kubectl get cm keyvalcfgmap -o yaml
 
-# 111. Create nginx pod with environment variables from keyvalcfgmap configmap and verify environment variables are created and delete nginx pod
+# 111. Create nginx pod with environment variables from keyvalcfgmap configmap that runs "env" command to verify environment variables are created and delete nginx pod
+kubectl run nginx --generator=run-pod/v1 --image=nginx --dry-run --output=yaml -- /bin/sh -c "env"
 cat << EOF >> nginx.yaml
-
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      command: [ "/bin/sh", "-c", "env" ]
+      envFrom:
+      - configMapRef:
+          name: keyvalcfgmap
+  restartPolicy: Never
 EOF
 kubectl create --filename=nginx.yaml && \
-
+kubectl wait --for=condition=Ready po/nginx && \
+kubectl logs nginx && \
+kubectl delete po/nginx
 # Answer
-// first run this command to save the pod yml
-kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > nginx-pod.yml// edit the yml to below file and create
-kubectl create -f nginx-pod.yml// verify
-kubectl exec -it nginx -- envkubectl delete po nginx
+kubectl run nginx --restart=Never --image=nginx --dry-run -o yaml > nginx-pod.yml
+kubectl create -f nginx-pod.yml
+kubectl exec -it nginx -- env
+kubectl delete po nginx
 
-# 112. Create an env file file.env with var1=val1 and create a configmap envcfgmap from this env file and verify the configmap
-
+# 112. Create file.env file with var1=val1 and create envcfgmap configmap with environment variables from file.env file and verify envcfgmap configmap is created
+cat << EOF >> file.env
+var1=val1
+EOF
+kubectl create cm envcfgmap --from-file=file.env && \
+kubectl describe cm/envcfgmap
 # Answer
 echo var1=val1 > file.env
-cat file.envkubectl create cm envcfgmap --from-env-file=file.env
+cat file.env
+kubectl create cm envcfgmap --from-env-file=file.env
 kubectl get cm envcfgmap -o yaml --export
 
-# 113. Create an nginx pod and load environment values from the above configmap envcfgmap and exec into the pod and verify the environment variables and delete the pod
-
+# 113. Create nginx pod with environment variables from envcfgmap configmap that runs "env" command to verify environment variables are created and delete nginx pod
+kubectl run nginx --generator=run-pod/v1 --image=nginx --dry-run --output=yaml -it --rm -- /bin/sh -c "env"
+cat << EOF >> nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      command: [ "/bin/sh", "-c", "env" ]
+      envFrom:
+      - configMapRef:
+          name: envcfgmap
+  restartPolicy: Never
+EOF
+kubectl create --filename=nginx.yaml && \
+kubectl get po/nginx
 # Answer
-// first run this command to save the pod yml
-kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > nginx-pod.yml// edit the yml to below file and create
-kubectl create -f nginx-pod.yml// verify
-kubectl exec -it nginx -- envkubectl delete po nginx
+kubectl run nginx --restart=Never --image=nginx --dry-run -o yaml > nginx-pod.yml
+kubectl create -f nginx-pod.yml
+kubectl exec -it nginx -- env
+kubectl delete po nginx
 
-# 114. Create a configmap called cfgvolume with values var1=val1, var2=val2 and create an nginx pod with volume nginx-volume which reads data from this configmap cfgvolume and put it on the path /etc/cfg
-
+# 114. Create cfgvolume configmap with var1=val1 and var2=val2 literals and create nginx pod with nginx-volume persistent volume thats reads environment variables from configvolume configmap on /etc/cfg path
+cat << EOF >> nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      command: [ "/bin/sh", "-c", "ls /etc/cfg/" ]
+      volumeMounts:
+      - name: nginx-volume
+        mountPath: /etc/cfg
+  volumes:
+    - name: nginx-volume
+      configMap:
+        name: cfgvolume
+  restartPolicy: Never
+EOF
+kubectl create cm cfgvolume --from-literal=var1=val1 --from-literal=var2=val2 && \
+kubectl get cm/cfgvolume --output=yaml && \
+kubectl create --filename=nginx.yaml && \
+kubectl wait --for=condition=Ready po/nginx && \
+kubectl logs po/nginx
 # Answer
-// first create a configmap cfgvolume
 kubectl create cm cfgvolume --from-literal=var1=val1 --from-literal=var2=val2// verify the configmap
 kubectl describe cm cfgvolume// create the config map 
 kubectl create -f nginx-volume.yml// exec into the pod
