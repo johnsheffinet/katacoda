@@ -826,24 +826,29 @@ spec:
       restartPolicy: Never
 EOF
 kubectl create --filename=busybox.yaml && \
+kubectl create cronjob busybox --image=busybox --schedule="*/1 * * * *" -- /bin/sh -c "echo '$(date) Hello from kubernetes cluster'" && \
+kubectl get cronjob/busybox --watch && \
 kubectl logs po --selector=="job-name=busybox"
 # Answer
 kubectl create cronjob busybox --image=busybox --schedule="*/1 * * * *" -- bin/sh -c "date; echo Hello from kubernetes cluster"
 
-# 093. Output the YAML file of the above cronjob
-
+# 093. Show yaml for busybox cronjob
+kubectl get cronjobs/busybox --output=yaml
 # Answer
-kubectl get cj date-job -o yaml
+kubectl get cj busybox -o yaml
 
 # 094. Verify busybox cronjob created busybox job and pods every minute and show logs
-
+kubectl get cronjob/busybox --watch && \
+kubectl logs po --selector=="job-name=busybox"
 # Answer
 kubectl get job
 kubectl get po
-kubectl logs date-job-<jobid>-<pod>
+kubectl logs busybox
 
 # 095. Delete busybox cronjob and verify busybox job and pods are deleted
-
+kubectl delete cronjob/busybox && \
+kubectl get cronjob/busybox &&
+kubectl get po --selector=="job-name=busybox"
 # Answer
 kubectl delete cj date-job// verify pods and jobs
 kubectl get po
@@ -852,7 +857,7 @@ kubectl autoscale deploy webapp --min=10 --max=20 --cpu-percent=85kubectl get hp
 
 # State Persistence (8%)
 
-# 096. List all persistent volumes in the cluster
+# 096. List all persistent volumes in cluster
 kubectl get pv --all-namespaces
 # Answer
 kubectl get pv
@@ -910,7 +915,7 @@ kubectl delete pvc task-pv-claim
 kubectl delete pv task-pv-volume
 
 # 100. Create redis pod with persist volume
-cat << EOF >> busybox.yaml
+cat << EOF >> redis.yaml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -923,87 +928,128 @@ spec:
     name: redis
     resources: {}
     volumeMounts:
-    - mountPath: /var/log
-      name: log-vol
+    - mountPath: /data/redis
+      name: data-vol
   volumes:
-  - name: log-vol
+  - name: data-vol
     emptyDir: {}
   dnsPolicy: ClusterFirst
   restartPolicy: Never
 status: {}
 EOF
-// emptyDir is the volume that lasts for the life of the pod
-kubectl create -f redis-storage.yaml
-101. Exec into the above pod and create a file named file.txt with the text ‘This is called the file’ in the path /data/redis and open another tab and exec again with the same pod and verifies file exist in the same path.
+kubectl create --filename=redis.yaml && \
+kubectl wait --for=condition=Ready po/redis && \
+kubectl get po/redis
+# Answer
+kubectl create -f redis.yaml
 
-// first terminal
+# 101. Run "echo 'This is called the file' > /data/redis/file.txt" command in redis pod and verify file is created
+kubectl exec redis -- /bin/sh -c "echo 'This is called the file' > /data/redis/file.txt"
+kubectl exec redis -- /bin/sh -c "cat /data/redis/file.txt" && \
+kubectl logs redis
+# Answer
 kubectl exec -it redis-storage /bin/sh
 cd /data/redis
-echo 'This is called the file' > file.txt//open another tab
-kubectl exec -it redis-storage /bin/sh
+echo 'This is called the file' > file.txt
+kubectl exec -it redis /bin/sh
 cat /data/redis/file.txt
-102. Delete the above pod and create again from the same yaml file and verifies there is no file.txt in the path /data/redis
 
-kubectl delete pod rediskubectl create -f redis-storage.yaml
-kubectl exec -it redis-storage /bin/sh
-cat /data/redis/file.txt // file doesn't exist
-103. Create PersistentVolume named task-pv-volume with storage 10Gi, access modes ReadWriteOnce, storageClassName manual, and volume at /mnt/data and Create a PersistentVolumeClaim of at least 3Gi storage and access mode ReadWriteOnce and verify status is Bound
+# 102. Delete the above pod and create again from the same yaml file and verifies there is no file.txt in the path /data/redis
+kubectl delete po/redis && \
+kubectl create --filename=redis.yaml && \
+kubectl wait --for=condition=Ready po/redis && \
+kubectl exec redis -- /bin/sh -c "cat /data/redis/file.txt" && \
+kubectl logs redis
+# Answer
+kubectl delete pod redis
+kubectl create -f redis.yaml
+kubectl exec -it redis /bin/sh
+cat /data/redis/file.txt
+
+# 103. Create PersistentVolume named task-pv-volume with storage 10Gi, access modes ReadWriteOnce, storageClassName manual, and volume at /mnt/data and Create a PersistentVolumeClaim of at least 3Gi storage and access mode ReadWriteOnce and verify status is Bound
 
 kubectl create -f task-pv-volume.yaml
-kubectl create -f task-pv-claim.yamlkubectl get pv
+kubectl create -f task-pv-claim.yaml
+kubectl get pv
 kubectl get pvc
-104. Create an nginx pod with containerPort 80 and with a PersistentVolumeClaim task-pv-claim and has a mouth path "/usr/share/nginx/html"
 
+# 104. Create an nginx pod with containerPort 80 and with a PersistentVolumeClaim task-pv-claim and has a mouth path "/usr/share/nginx/html"
+
+# Answer
 kubectl create -f task-pv-pod.yaml
-task-pv-pod.yaml
 
-echo ===> Configuration (18%)
-105. List all the configmaps in the cluster
+# Configuration (18%)
 
+# 105. List all configmaps in cluster
+kubectl get cm --all-namespaces
+# Answer
 kubectl get cm
-     or
-kubectl get configmap
-106. Create a configmap called myconfigmap with literal value appname=myapp
 
+# 106. Create myconfigmap configmap with appname=myapp literal
 kubectl create cm myconfigmap --from-literal=appname=myapp
-107. Verify the configmap we just created has this data
+# Answer
+kubectl create cm myconfigmap --from-literal=appname=myapp
 
-// you will see under datakubectl get cm -o yaml
-         or
-kubectl describe cm
-108. delete the configmap myconfigmap we just created
+# 107. Show myconfigmap configmap
+kubectl describe cm/myconfigmap
+# Answer
+kubectl describe cm myconfigmap
 
+# 108. Delete myconfigmap configmap
+kubectl delete cm/myconfigmap
+# Answer
 kubectl delete cm myconfigmap
-109. Create a file called config.txt with two values key1=value1 and key2=value2 and verify the file
 
-cat >> config.txt << EOF
+# 109. Create config.txt file with key1=value1 and key2=value2 literals and verify
+cat << EOF >> config.txt
 key1=value1
 key2=value2
-EOFcat config.txt
-110. Create a configmap named keyvalcfgmap and read data from the file config.txt and verify that configmap is created correctly
+EOF
+cat config.txt
+# Answer
+cat << EOF >> config.txt 
+key1=value1
+key2=value2
+EOF
+cat config.txt
 
-kubectl create cm keyvalcfgmap --from-file=config.txtkubectl get cm keyvalcfgmap -o yaml
-111. Create an nginx pod and load environment values from the above configmap keyvalcfgmap and exec into the pod and verify the environment variables and delete the pod
+# 110. Create keyvalcfgmap configmap config.txt file and verify
+kubectl create cm keyvalcfgmap --from-file=config.txt && \
+kubectl describe cm/keyvalcfgmap
+# Answer
+kubectl create cm keyvalcfgmap --from-file=config.txt
+kubectl get cm keyvalcfgmap -o yaml
 
+# 111. Create nginx pod with environment variables from keyvalcfgmap configmap and verify environment variables are created and delete nginx pod
+cat << EOF >> nginx.yaml
+
+EOF
+kubectl create --filename=nginx.yaml && \
+
+# Answer
 // first run this command to save the pod yml
 kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > nginx-pod.yml// edit the yml to below file and create
 kubectl create -f nginx-pod.yml// verify
 kubectl exec -it nginx -- envkubectl delete po nginx
-nginx-pod.yml
-112. Create an env file file.env with var1=val1 and create a configmap envcfgmap from this env file and verify the configmap
 
+# 112. Create an env file file.env with var1=val1 and create a configmap envcfgmap from this env file and verify the configmap
+
+# Answer
 echo var1=val1 > file.env
 cat file.envkubectl create cm envcfgmap --from-env-file=file.env
 kubectl get cm envcfgmap -o yaml --export
-113. Create an nginx pod and load environment values from the above configmap envcfgmap and exec into the pod and verify the environment variables and delete the pod
 
+# 113. Create an nginx pod and load environment values from the above configmap envcfgmap and exec into the pod and verify the environment variables and delete the pod
+
+# Answer
 // first run this command to save the pod yml
 kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > nginx-pod.yml// edit the yml to below file and create
 kubectl create -f nginx-pod.yml// verify
 kubectl exec -it nginx -- envkubectl delete po nginx
-nginx-pod.yaml
-114. Create a configmap called cfgvolume with values var1=val1, var2=val2 and create an nginx pod with volume nginx-volume which reads data from this configmap cfgvolume and put it on the path /etc/cfg
 
+# 114. Create a configmap called cfgvolume with values var1=val1, var2=val2 and create an nginx pod with volume nginx-volume which reads data from this configmap cfgvolume and put it on the path /etc/cfg
+
+# Answer
 // first create a configmap cfgvolume
 kubectl create cm cfgvolume --from-literal=var1=val1 --from-literal=var2=val2// verify the configmap
 kubectl describe cm cfgvolume// create the config map 
@@ -1011,26 +1057,28 @@ kubectl create -f nginx-volume.yml// exec into the pod
 kubectl exec -it nginx -- /bin/sh// check the path
 cd /etc/cfg
 ls
-nginx-volume.yml
-115. Create a pod called secbusybox with the image busybox which executes command sleep 3600 and makes sure any Containers in the Pod, all processes run with user ID 1000 and with group id 2000 and verify.
 
+# 115. Create a pod called secbusybox with the image busybox which executes command sleep 3600 and makes sure any Containers in the Pod, all processes run with user ID 1000 and with group id 2000 and verify.
+
+# Answer
 // create yml file with dry-run
 kubectl run secbusybox --image=busybox --restart=Never --dry-run -o yaml -- /bin/sh -c "sleep 3600;" > busybox.yml// edit the pod like below and create
 kubectl create -f busybox.yml// verify
 kubectl exec -it secbusybox -- sh
 id // it will show the id and group
-busybox.yml
-116. Create the same pod as above this time set the securityContext for the container as well and verify that the securityContext of container overrides the Pod level securityContext.
 
+# 116. Create the same pod as above this time set the securityContext for the container as well and verify that the securityContext of container overrides the Pod level securityContext.
+
+# Answer
 // create yml file with dry-run
 kubectl run secbusybox --image=busybox --restart=Never --dry-run -o yaml -- /bin/sh -c "sleep 3600;" > busybox.yml// edit the pod like below and create
 kubectl create -f busybox.yml// verify
 kubectl exec -it secbusybox -- sh
 id // you can see container securityContext overides the Pod level
-busybox.yml
-117. Create pod with an nginx image and configure the pod with capabilities NET_ADMIN and SYS_TIME verify the capabilities
 
-// create the yaml file
+# 117. Create pod with an nginx image and configure the pod with capabilities NET_ADMIN and SYS_TIME verify the capabilities
+
+# Answer// create the yaml file
 kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > nginx.yml// edit as below and create pod
 kubectl create -f nginx.yml// exec and verify
 kubectl exec -it nginx -- sh
@@ -1038,61 +1086,75 @@ cd /proc/1
 cat status// you should see these values
 CapPrm: 00000000aa0435fb
 CapEff: 00000000aa0435fb
-nginx.yml
-118. Create a Pod nginx and specify a memory request and a memory limit of 100Mi and 200Mi respectively.
 
+# 118. Create a Pod nginx and specify a memory request and a memory limit of 100Mi and 200Mi respectively.
+
+# Answer
 // create a yml file
 kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > nginx.yml// add the resources section and create
 kubectl create -f nginx.yml// verify
 kubectl top pod
-nginx.yml
-119. Create a Pod nginx and specify a CPU request and a CPU limit of 0.5 and 1 respectively.
 
+# 119. Create a Pod nginx and specify a CPU request and a CPU limit of 0.5 and 1 respectively.
+
+# Answer
 // create a yml file
 kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > nginx.yml// add the resources section and create
 kubectl create -f nginx.yml// verify
 kubectl top pod
-nginx.yml
-120. Create a Pod nginx and specify both CPU, memory requests and limits together and verify.
 
+# 120. Create a Pod nginx and specify both CPU, memory requests and limits together and verify.
+
+# Answer
 // create a yml file
 kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > nginx.yml// add the resources section and create
 kubectl create -f nginx.yml// verify
 kubectl top pod
-nginx.yml
-121. Create a Pod nginx and specify a memory request and a memory limit of 100Gi and 200Gi respectively which is too big for the nodes and verify pod fails to start because of insufficient memory
 
+# 121. Create a Pod nginx and specify a memory request and a memory limit of 100Gi and 200Gi respectively which is too big for the nodes and verify pod fails to start because of insufficient memory
+
+# Answer
 // create a yml file
 kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > nginx.yml// add the resources section and create
 kubectl create -f nginx.yml// verify
 kubectl describe po nginx // you can see pending state
-nginx.yml
-122. Create a secret mysecret with values user=myuser and password=mypassword
 
+# 122. Create a secret mysecret with values user=myuser and password=mypassword
+
+# Answer
 kubectl create secret generic my-secret --from-literal=username=user --from-literal=password=mypassword
-123. List the secrets in all namespaces
 
+# 123. List the secrets in all namespaces
+
+# Answer
 kubectl get secret --all-namespaces
-124. Output the yaml of the secret created above
 
+# 124. Output the yaml of the secret created above
+
+# Answer
 kubectl get secret my-secret -o yaml
-125. Create an nginx pod which reads username as the environment variable
 
+# 125. Create an nginx pod which reads username as the environment variable
+
+# Answer
 // create a yml file
 kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > nginx.yml// add env section below and create
 kubectl create -f nginx.yml//verify
 kubectl exec -it nginx -- env
-nginx.yml
-126. Create an nginx pod which loads the secret as environment variables
 
+# 126. Create an nginx pod which loads the secret as environment variables
+
+# Answer
 // create a yml file
 kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > nginx.yml// add env section below and create
 kubectl create -f nginx.yml//verify
 kubectl exec -it nginx -- env
-nginx.yml
-127. List all the service accounts in the default namespace
 
+# 127. List all the service accounts in the default namespace
+
+# Answer
 kubectl get sa
+
 128. List all the service accounts in all namespaces
 
 kubectl get sa --all-namespaces
