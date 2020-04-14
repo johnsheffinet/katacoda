@@ -914,7 +914,7 @@ kubectl pv/task-pv-claim pvc/task-pv-claim
 kubectl delete pvc task-pv-claim
 kubectl delete pv task-pv-volume
 
-# 100. Create redis pod with persist volume
+# 100. Create redis pod with persistent volume
 cat << EOF >> redis.yaml
 apiVersion: v1
 kind: Pod
@@ -943,8 +943,8 @@ kubectl get po/redis
 # Answer
 kubectl create -f redis.yaml
 
-# 101. Run "echo 'This is called the file' > /data/redis/file.txt" command in redis pod and verify file is created
-kubectl exec redis -- /bin/sh -c "echo 'This is called the file' > /data/redis/file.txt"
+# 101. Run "echo 'This is called the file' > /data/redis/file.txt" command in redis pod and verify file.txt file is created
+kubectl exec redis -- /bin/sh -c "echo 'This is called the file' > /data/redis/file.txt" && \
 kubectl exec redis -- /bin/sh -c "cat /data/redis/file.txt" && \
 kubectl logs redis
 # Answer
@@ -954,7 +954,7 @@ echo 'This is called the file' > file.txt
 kubectl exec -it redis /bin/sh
 cat /data/redis/file.txt
 
-# 102. Delete the above pod and create again from the same yaml file and verifies there is no file.txt in the path /data/redis
+# 102. Delete redis pod and recreate redis pod and verify /data/redis/file.txt doesnot exist
 kubectl delete po/redis && \
 kubectl create --filename=redis.yaml && \
 kubectl wait --for=condition=Ready po/redis && \
@@ -966,14 +966,16 @@ kubectl create -f redis.yaml
 kubectl exec -it redis /bin/sh
 cat /data/redis/file.txt
 
-# 103. Create PersistentVolume named task-pv-volume with storage 10Gi, access modes ReadWriteOnce, storageClassName manual, and volume at /mnt/data and Create a PersistentVolumeClaim of at least 3Gi storage and access mode ReadWriteOnce and verify status is Bound
+# 103. Create task-pv-volume persistent volume with 10Gi storage capacity, ReadWriteOnce access modes, manual storage class name and /mnt/data path 
+   and create a PersistentVolumeClaim of at least 3Gi storage and access mode ReadWriteOnce 
+   and verify status is Bound
 
 kubectl create -f task-pv-volume.yaml
 kubectl create -f task-pv-claim.yaml
 kubectl get pv
 kubectl get pvc
 
-# 104. Create an nginx pod with containerPort 80 and with a PersistentVolumeClaim task-pv-claim and has a mouth path "/usr/share/nginx/html"
+# 104. Create  nginx pod with containerPort 80 and with a PersistentVolumeClaim task-pv-claim and has a mouth path "/usr/share/nginx/html"
 
 # Answer
 kubectl create -f task-pv-pod.yaml
@@ -991,7 +993,7 @@ kubectl create cm myconfigmap --from-literal=appname=myapp
 kubectl create cm myconfigmap --from-literal=appname=myapp
 
 # 107. Show myconfigmap configmap
-kubectl describe cm/myconfigmap
+kubectl get cm/myconfigmap --output=yaml
 # Answer
 kubectl describe cm myconfigmap
 
@@ -1013,7 +1015,7 @@ key2=value2
 EOF
 cat config.txt
 
-# 110. Create keyvalcfgmap configmap from config.txt file and verify
+# 110. Create keyvalcfgmap configmap from config.txt file and verify keyvalcfgmap configmap is created
 kubectl create cm keyvalcfgmap --from-file=config.txt && \
 kubectl describe cm/keyvalcfgmap
 # Answer
