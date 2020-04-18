@@ -1,3 +1,4 @@
+# Core Concepts (13%)
 
 # 001. Show all namespaces in cluster
 kubectl get ns
