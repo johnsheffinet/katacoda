@@ -1182,28 +1182,30 @@ kubectl run busybox --image=busybox --restart=Never --dry-run -o yaml -- /bin/sh
 kubectl create -f busybox.yml
 kubectl exec busybox -it -- /bin/sh -c "id"
 
-# 117. Create pod with an nginx image and configure the pod with capabilities NET_ADMIN and SYS_TIME verify the capabilities
-cat << EOF >> busybox.yaml
+# 117. Create nginx pod with NET_ADMIN and SYS_TIME Linux capabilities.
+cat << EOF >> nginx.yaml
 apiVersion: v1
 kind: Pod
 metadata:
-  name: busybox
+  name: nginx
 spec:
   securityContect:
     runAsUser: 1000
     runAsGroup: 3000
     fsGroup: 2000
   containers:
-    - name: busybox
-      image: busybox
-      command: [ "/bin/sh", "-c", "id; sleep 3600" ]
+    - name: nginx
+      image: nginx
+      command: [ "/bin/sh", "-c", "cat /proc/1/status; sleep 3600" ]
       securityContext:
+        capabilities:
+          add: ["NET_ADMIN", "SYS_TIME"]
         allowPrivilegeEscalation: false
   restartPolicy: Never
 EOF
-kubectl create --filename=busybox.yaml && \ 
-kubectl wait --for=condition=Ready po/busybox && \ 
-kubectl logs busybox
+kubectl create --filename=nginx.yaml && \ 
+kubectl wait --for=condition=Ready po/nginx && \ 
+kubectl logs nginx
 # Answer
 kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > nginx.yml
 kubectl create -f nginx.yml
@@ -1214,7 +1216,75 @@ cat status
 CapPrm: 00000000aa0435fb
 CapEff: 00000000aa0435fb
 
-# 118. Create a Pod nginx and specify a memory request and a memory limit of 100Mi and 200Mi respectively.
+# 118. Create nginx pod with 100Mi memory request and 200Mi memory limit.
+cat << EOF >> nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  securityContect:
+    runAsUser: 1000
+    runAsGroup: 3000
+    fsGroup: 2000
+  containers:
+    - name: nginx
+      image: nginx
+      command: [ "/bin/sh", "-c", "id; sleep 3600" ]
+      resources:
+        limits:
+          memory: 200Mi
+        requests:
+          memory: 100Mi
+      securityContext:
+        allowPrivilegeEscalation: false
+  restartPolicy: Never
+EOF
+kubectl create --filename=nginx.yaml && \ 
+kubectl wait --for=condition=Ready po/nginx && \ 
+kubectl top po/nginx
+# Answer
+// create a yml file
+kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > nginx.yml
+// add the resources section and create
+kubectl create -f nginx.yml
+// verify
+kubectl top pod
+
+# 119. Create nginx pod with 500m cpu request and 1000m cpu limit.
+cat << EOF >> nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  securityContect:
+    runAsUser: 1000
+    runAsGroup: 3000
+    fsGroup: 2000
+  containers:
+    - name: nginx
+      image: nginx
+      command: [ "/bin/sh", "-c", "id; sleep 3600" ]
+      resources:
+        limits:
+          cpu: 1000m
+        requests:
+          cpu: 500m
+  restartPolicy: Never
+EOF
+kubectl create --filename=nginx.yaml && \ 
+kubectl wait --for=condition=Ready po/nginx && \ 
+kubectl top po/nginx
+# Answer
+// create a yml file
+kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > nginx.yml
+// add the resources section and create
+kubectl create -f nginx.yml
+// verify
+kubectl top pod
+
+# 120. Create nginx pod with 500m cpu request, 1000m cpu limit, 100Mi memory request and 200Mi memory limit.
 cat << EOF >> busybox.yaml
 apiVersion: v1
 kind: Pod
@@ -1228,9 +1298,14 @@ spec:
   containers:
     - name: busybox
       image: busybox
-      command: [ "/bin/sh", "-c", "id; sleep 3600" ]
-      securityContext:
-        allowPrivilegeEscalation: false
+      command: [ "/bin/sh", "-c", "sleep 3600" ]
+      resources:
+        limits:
+          cpu: 1000m
+          memory: 200Mi
+        requests:
+          cpu: 500m
+          memory: 100Mi
   restartPolicy: Never
 EOF
 kubectl create --filename=busybox.yaml && \ 
@@ -1244,72 +1319,12 @@ kubectl create -f nginx.yml
 // verify
 kubectl top pod
 
-# 119. Create a Pod nginx and specify a CPU request and a CPU limit of 0.5 and 1 respectively.
-cat << EOF >> busybox.yaml
+# 121. Create nginx pod with 100Gi memory request and 200Gi memory limit and verify failure
+cat << EOF >> nginx.yaml
 apiVersion: v1
 kind: Pod
 metadata:
-  name: busybox
-spec:
-  securityContect:
-    runAsUser: 1000
-    runAsGroup: 3000
-    fsGroup: 2000
-  containers:
-    - name: busybox
-      image: busybox
-      command: [ "/bin/sh", "-c", "id; sleep 3600" ]
-      securityContext:
-        allowPrivilegeEscalation: false
-  restartPolicy: Never
-EOF
-kubectl create --filename=busybox.yaml && \ 
-kubectl wait --for=condition=Ready po/busybox && \ 
-kubectl logs busybox
-# Answer
-// create a yml file
-kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > nginx.yml
-// add the resources section and create
-kubectl create -f nginx.yml
-// verify
-kubectl top pod
-
-# 120. Create a Pod nginx and specify both CPU, memory requests and limits together and verify.
-cat << EOF >> busybox.yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: busybox
-spec:
-  securityContect:
-    runAsUser: 1000
-    runAsGroup: 3000
-    fsGroup: 2000
-  containers:
-    - name: busybox
-      image: busybox
-      command: [ "/bin/sh", "-c", "id; sleep 3600" ]
-      securityContext:
-        allowPrivilegeEscalation: false
-  restartPolicy: Never
-EOF
-kubectl create --filename=busybox.yaml && \ 
-kubectl wait --for=condition=Ready po/busybox && \ 
-kubectl logs busybox
-# Answer
-// create a yml file
-kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml > nginx.yml
-// add the resources section and create
-kubectl create -f nginx.yml
-// verify
-kubectl top pod
-
-# 121. Create a Pod nginx and specify a memory request and a memory limit of 100Gi and 200Gi respectively which is too big for the nodes and verify pod fails to start because of insufficient memory
-cat << EOF >> busybox.yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: busybox
+  name: nginx
 spec:
   securityContect:
     runAsUser: 1000
