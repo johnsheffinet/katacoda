@@ -1,0 +1,99 @@
+# Services and Networking (13%)
+
+# 144. Create nginx pod with app: my-nginx label and port 80
+rm nginx.yaml
+cat << EOF >> nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      ports:
+        - containerPort: 80
+  restartPolicy: Never
+EOF
+kubectl apply --filename=nginx.yaml && \
+kubectl wait --for=condition=Ready po/nginx && \
+kubectl get po/nginx --output=yaml
+# Answer
+kubectl run nginx --restart=Never --image=nginx --port=80 --dry-run -o yaml > nginx.yaml
+/*
+metadata:
+  labels:
+    app: nginx
+spec:
+  containers:
+    - ports:
+        - containerPort: 80 
+*/
+kubectl create -f nginx.yaml
+
+# 145. Create nginx service for nginx pod with app: my-nginx selector 
+cat << EOF >> nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      command: [ "/bin/sh", "-c", "id; sleep 3600" ]
+      securityContext:
+        allowPrivilegeEscalation: false
+  restartPolicy: Never
+EOF
+# Answer
+// create the below service
+kubectl create -f nginx-svc.yaml
+
+# 146. Show labels for nginx pod and nginx service
+
+# Answer
+// get the pod with labels
+kubectl get po nginx --show-labels
+// get the service and chekc the selector column
+kubectl get svc my-service -o wide
+
+# 147. Expose nginx pod and show labels for nginx service
+
+# Answer
+// delete the service
+kubectl delete svc my-service
+// create the service again
+kubectl expose po nginx --port=80 --target-port=9376
+// verify the label
+kubectl get svc -l app=my-nginx
+
+# 148. Expose nginx pod with NodePort type
+
+# Answer
+// delete the service
+kubectl delete svc nginx
+// create service with expose command
+kubectl expose po nginx --port=80 --type=NodePort
+
+# 149. Create busybox pod that gets index.html page from nginx service
+
+# Answer
+// get the clusterIP from this command
+kubectl get svc nginx -o wide
+// create temporary busybox to check the nodeport
+kubectl run busybox --image=busybox --restart=Never -it --rm -- wget -o- <Cluster IP>:80
+
+# 150. Create denyingress network policy that denies all ingress traffic
+
+# Answer
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
