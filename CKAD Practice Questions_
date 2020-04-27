@@ -1,90 +1,104 @@
 # Services and Networking (13%)
 
-# 144. Create nginx pod with app: my-nginx label and port 80
+# 144. Create nginx pod with app=nginx label and port 80
+kubectl delete po/nginx
+kubectl run nginx --generator=run-pod/v1 --image=nginx --port=80 && \
+kubectl wait --for=condition=Ready po/nginx && \
+kubectl label po/nginx app=nginx && \
+kubectl get po/nginx --show-labels
+export IP=$(kubectl get po/nginx --output=jsonpath="{.status.podIP}") && \
+export PORT=$(kubectl get po/nginx --output=jsonpath="{.spec.containers[?(@.name=='nginx')].ports[0].containerPort}") && \
+echo $IP:$PORT && \
+curl $IP:$PORT
+# Answer
 rm nginx.yaml
 cat << EOF >> nginx.yaml
 apiVersion: v1
 kind: Pod
 metadata:
+  creationTimestamp: null
+  labels:
+    app: nginx
   name: nginx
-  labels:
-    app: nginx
 spec:
   containers:
-    - name: nginx
-      image: nginx
-      ports:
-        - containerPort: 80
+  - image: nginx
+    name: nginx
+    ports:
+    - containerPort: 80
+    resources: {}
+  dnsPolicy: ClusterFirst
   restartPolicy: Never
+status: {}
 EOF
-kubectl apply --filename=nginx.yaml && \
-kubectl wait --for=condition=Ready po/nginx && \
-kubectl get po/nginx --output=yaml
-# Answer
-kubectl run nginx --restart=Never --image=nginx --port=80 --dry-run -o yaml > nginx.yaml
-/*
-metadata:
-  labels:
-    app: nginx
-spec:
-  containers:
-    - ports:
-        - containerPort: 80 
-*/
 kubectl create -f nginx.yaml
 
-# 145. Create nginx service for nginx pod with app: my-nginx selector 
+# 145. Create nginx service for nginx pod with app=nginx selector 
+kubectl delete svc/nginx
+kubectl create svc clusterip nginx --tcp=8080:80 && \
+kubectl get svc/nginx --output=wide
+export IP=$(kubectl get svc/nginx --output=jsonpath="{.spec.clusterIP}") && \
+export PORT=$(kubectl get svc/nginx --output=jsonpath="{.spec.ports[0].port}") && \
+echo $IP:$PORT && \
+curl $IP:$PORT
+# Answer
+rm nginx.yaml
 cat << EOF >> nginx.yaml
 apiVersion: v1
-kind: Pod
+kind: Service
 metadata:
   name: nginx
 spec:
-  containers:
-    - name: nginx
-      image: nginx
-      command: [ "/bin/sh", "-c", "id; sleep 3600" ]
-      securityContext:
-        allowPrivilegeEscalation: false
-  restartPolicy: Never
+  selector:
+    app: nginx
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 80
 EOF
-# Answer
-// create the below service
-kubectl create -f nginx-svc.yaml
+kubectl create -f nginx.yaml
 
-# 146. Show labels for nginx pod and nginx service
-
+# 146. Show labels for nginx pod; Show selector for nginx service
+kubectl get po/nginx --show-labels && \
+kubectl get svc/nginx --output=wide
 # Answer
-// get the pod with labels
 kubectl get po nginx --show-labels
-// get the service and chekc the selector column
-kubectl get svc my-service -o wide
+kubectl get svc nginx -o wide
 
 # 147. Expose nginx pod and show labels for nginx service
-
+kubectl delete svc/nginx
+kubectl expose po/nginx --port=8080 --target-port=80 && \
+kubectl get svc/nginx --output=wide
+kubectl expose po/nginx --type=NodePort --port=8080 --target-port=80 && \
+kubectl get svc/nginx --output=wide
+export IP=$(kubectl get svc/nginx --output=jsonpath="{.spec.clusterIP}") && \
+export PORT=$(kubectl get svc/nginx --output=jsonpath="{.spec.ports[0].port}") && \
+echo $IP:$PORT && \
+curl $IP:$PORT
 # Answer
-// delete the service
-kubectl delete svc my-service
-// create the service again
-kubectl expose po nginx --port=80 --target-port=9376
-// verify the label
-kubectl get svc -l app=my-nginx
+kubectl delete svc nginx
+kubectl expose po nginx --port=8080 --target-port=80
+kubectl get svc -l app=nginx
 
 # 148. Expose nginx pod with NodePort type
-
+kubectl delete svc/nginx
+kubectl expose po/nginx --type=NodePort --port=80 --target-port=80 && \
+kubectl get svc/nginx --output=wide
+export IP=$(kubectl get svc/nginx --output=jsonpath="{.spec.clusterIP}") && \
+export PORT=$(kubectl get svc/nginx --output=jsonpath="{.spec.ports[0].port}") && \
+echo $IP:$PORT && \
+curl $IP:$PORT
 # Answer
-// delete the service
 kubectl delete svc nginx
-// create service with expose command
 kubectl expose po nginx --port=80 --type=NodePort
 
 # 149. Create busybox pod that gets index.html page from nginx service
-
+export IP=$(kubectl get svc/nginx --output=jsonpath="{.spec.clusterIP}") && \
+export PORT=$(kubectl get svc/nginx --output=jsonpath="{.spec.ports[0].port}") && \
+kubectl run busybox --generator=run-pod/v1 --image=busybox --rm -it -- wget -O - $IP:$PORT/index.html
 # Answer
-// get the clusterIP from this command
 kubectl get svc nginx -o wide
-// create temporary busybox to check the nodeport
-kubectl run busybox --image=busybox --restart=Never -it --rm -- wget -o- <Cluster IP>:80
+kubectl run busybox --restart=Never --image=busybox --rm -it  -- wget -o- <Cluster IP>:80
 
 # 150. Create denyingress network policy that denies all ingress traffic
 
