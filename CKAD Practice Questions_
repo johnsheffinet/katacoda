@@ -2,9 +2,8 @@
 
 # 144. Create nginx pod with app=nginx label and port=80
 kubectl delete po/nginx
-kubectl run nginx --generator=run-pod/v1 --image=nginx --port=80 && \
+kubectl run nginx --generator=run-pod/v1 --image=nginx --labels="app=nginx" --port=80 && \
 kubectl wait --for=condition=Ready po/nginx && \
-kubectl label po/nginx app=nginx && \
 kubectl get po/nginx --show-labels
 export IP=$(kubectl get po/nginx --output=jsonpath="{.status.podIP}") && \
 export PORT=$(kubectl get po/nginx --output=jsonpath="{.spec.containers[?(@.name=='nginx')].ports[0].containerPort}") && \
@@ -35,7 +34,7 @@ kubectl create -f nginx.yaml
 
 # 145. Create nginx service with app=nginx selector 
 kubectl delete svc/nginx
-kubectl create svc clusterip nginx --tcp=8081:80 && \
+kubectl create svc clusterip nginx --tcp=80:80 && \
 kubectl get svc/nginx --output=wide
 export IP=$(kubectl get svc/nginx --output=jsonpath="{.spec.clusterIP}") && \
 export PORT=$(kubectl get svc/nginx --output=jsonpath="{.spec.ports[0].port}") && \
@@ -53,7 +52,7 @@ spec:
     app: nginx
   ports:
     - protocol: TCP
-      port: 8081
+      port: 80
       targetPort: 80
 EOF
 kubectl create -f nginx.yaml
@@ -67,7 +66,7 @@ kubectl get svc nginx -o wide
 
 # 147. Expose nginx pod and show labels for nginx service
 kubectl delete svc/nginx
-kubectl expose po/nginx --port=8081 --target-port=80 && \
+kubectl expose po/nginx --port=80 --target-port=80 && \
 kubectl get svc/nginx --output=wide
 export IP=$(kubectl get svc/nginx --output=jsonpath="{.spec.clusterIP}") && \
 export PORT=$(kubectl get svc/nginx --output=jsonpath="{.spec.ports[0].port}") && \
@@ -75,16 +74,17 @@ echo $IP:$PORT && \
 curl $IP:$PORT
 # Answer
 kubectl delete svc nginx
-kubectl expose po nginx --port=8081 --target-port=80
+kubectl expose po nginx --port=80 --target-port=80
 kubectl get svc -l app=nginx
 
 # 148. Expose nginx pod with NodePort type
 kubectl delete svc/nginx
-kubectl expose po/nginx --type=NodePort --port=80 --target-port=80 && \
+kubectl expose po/nginx --port=80 --target-port=80 --type=NodePort && \
 kubectl get svc/nginx --output=wide
 export IP=$(kubectl get svc/nginx --output=jsonpath="{.spec.clusterIP}") && \
 export PORT=$(kubectl get svc/nginx --output=jsonpath="{.spec.ports[0].port}") && \
 echo $IP:$PORT && \
+curl $IP:$PORT
 curl $IP:$PORT
 # Answer
 kubectl delete svc nginx
@@ -93,14 +93,48 @@ kubectl expose po nginx --port=80 --type=NodePort
 # 149. Create busybox pod that gets index.html page from nginx service
 export IP=$(kubectl get svc/nginx --output=jsonpath="{.spec.clusterIP}") && \
 export PORT=$(kubectl get svc/nginx --output=jsonpath="{.spec.ports[0].port}") && \
-kubectl run busybox --generator=run-pod/v1 --image=busybox -it -- wget -q -O - $IP:$PORT/index.html
+kubectl run busybox --generator=run-pod/v1 --image=busybox --rm -it -- /bin/sh -c "wget --spider --timeout=1 nginx; sleep 3600"
 # Answer
 kubectl get svc nginx -o wide
 kubectl run busybox --restart=Never --image=busybox --rm -it  -- wget -o- <Cluster IP>:80
 
 # 150. Create denyingress network policy that denies all ingress traffic
-
+rm nginx.yaml
+cat << EOF >> nginx.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: nginx
+spec:
+  podSelector:
+    matchLabels:
+      app: nginx
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - ipBlock: {}
+    - namespaceSelector: {}
+    - podSelector:
+        matchLabels:
+          access: nginx
+    ports: {}
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 10.0.0.0/24
+    ports:
+    - protocol: TCP
+      port: 5978
+EOF
+kubectl create --filename=nginx.yaml && \
+kubectl get networkpolicy/nginx
+kubectl run busybox --generator=run-pod/v1 --image=busybox --rm -it -- /bin/sh -c "wget --spider --timeout=1 nginx; sleep 3600" && \
+kubectl run busybox --generator=run-pod/v1 --image=busybox --labels="access=nginx" --rm -it -- /bin/sh -c "wget --spider --timeout=1 nginx; sleep 3600"
 # Answer
+rm nginx.yaml
+cat << EOF >> nginx.yaml
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -109,3 +143,5 @@ spec:
   podSelector: {}
   policyTypes:
   - Ingress
+EOF
+kubectl create -f nginx.yaml
