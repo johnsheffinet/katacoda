@@ -92,7 +92,7 @@ kubectl expose po nginx --port=80 --type=NodePort
 
 # 149. Create busybox pod that gets index.html page from nginx service
 export IP=$(kubectl get svc/nginx --output=jsonpath="{.spec.clusterIP}") && \
-export PORT=$(kubectl get svc/nginx --output=jsonpath="{.spec.ports[0].port}") && \
+export PORT=$(kubectl get svc/nginx --output=jsonpath="{.spec.ports[0].port}")
 kubectl run busybox --generator=run-pod/v1 --image=busybox --rm -it -- /bin/sh -c "wget --spider --timeout=1 nginx; sleep 3600"
 # Answer
 kubectl get svc nginx -o wide
@@ -114,12 +114,9 @@ spec:
   - Egress
   ingress:
   - from:
-    - ipBlock: {}
-    - namespaceSelector: {}
     - podSelector:
         matchLabels:
           access: nginx
-    ports: {}
   egress:
   - to:
     - ipBlock:
