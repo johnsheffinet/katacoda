@@ -1,6 +1,6 @@
 # Services and Networking (13%)
 
-# 144. Create nginx pod with app=nginx label and port 80
+# 144. Create nginx pod with app=nginx label and port=80
 kubectl delete po/nginx
 kubectl run nginx --generator=run-pod/v1 --image=nginx --port=80 && \
 kubectl wait --for=condition=Ready po/nginx && \
@@ -33,9 +33,9 @@ status: {}
 EOF
 kubectl create -f nginx.yaml
 
-# 145. Create nginx service for nginx pod with app=nginx selector 
+# 145. Create nginx service with app=nginx selector 
 kubectl delete svc/nginx
-kubectl create svc clusterip nginx --tcp=8080:80 && \
+kubectl create svc clusterip nginx --tcp=8081:80 && \
 kubectl get svc/nginx --output=wide
 export IP=$(kubectl get svc/nginx --output=jsonpath="{.spec.clusterIP}") && \
 export PORT=$(kubectl get svc/nginx --output=jsonpath="{.spec.ports[0].port}") && \
@@ -53,7 +53,7 @@ spec:
     app: nginx
   ports:
     - protocol: TCP
-      port: 8080
+      port: 8081
       targetPort: 80
 EOF
 kubectl create -f nginx.yaml
@@ -67,9 +67,7 @@ kubectl get svc nginx -o wide
 
 # 147. Expose nginx pod and show labels for nginx service
 kubectl delete svc/nginx
-kubectl expose po/nginx --port=8080 --target-port=80 && \
-kubectl get svc/nginx --output=wide
-kubectl expose po/nginx --type=NodePort --port=8080 --target-port=80 && \
+kubectl expose po/nginx --port=8081 --target-port=80 && \
 kubectl get svc/nginx --output=wide
 export IP=$(kubectl get svc/nginx --output=jsonpath="{.spec.clusterIP}") && \
 export PORT=$(kubectl get svc/nginx --output=jsonpath="{.spec.ports[0].port}") && \
@@ -77,7 +75,7 @@ echo $IP:$PORT && \
 curl $IP:$PORT
 # Answer
 kubectl delete svc nginx
-kubectl expose po nginx --port=8080 --target-port=80
+kubectl expose po nginx --port=8081 --target-port=80
 kubectl get svc -l app=nginx
 
 # 148. Expose nginx pod with NodePort type
@@ -95,7 +93,7 @@ kubectl expose po nginx --port=80 --type=NodePort
 # 149. Create busybox pod that gets index.html page from nginx service
 export IP=$(kubectl get svc/nginx --output=jsonpath="{.spec.clusterIP}") && \
 export PORT=$(kubectl get svc/nginx --output=jsonpath="{.spec.ports[0].port}") && \
-kubectl run busybox --generator=run-pod/v1 --image=busybox --rm -it -- wget -O - $IP:$PORT/index.html
+kubectl run busybox --generator=run-pod/v1 --image=busybox -it -- wget -q -O - $IP:$PORT/index.html
 # Answer
 kubectl get svc nginx -o wide
 kubectl run busybox --restart=Never --image=busybox --rm -it  -- wget -o- <Cluster IP>:80
