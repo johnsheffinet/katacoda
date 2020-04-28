@@ -1,3 +1,184 @@
+# Observability (18%)
+
+# 132. Create nginx pod with containerPort=80 and / health check on port 80 and delete the pod.
+
+# Answer
+cat << EOF >> nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+    ports:
+    - containerPort: 80
+    readinessProbe:
+      httpGet:
+        path: /
+        port: 80
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}
+EOF
+kubectl create -f nginx.yaml
+kubectl describe pod nginx | grep -i readiness
+kubectl delete po nginx
+
+# 133. Create nginx pod with containerPort=80 and /healthz on port 80.
+
+# Answer
+cat << EOF >> nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+    ports:
+    - containerPort: 80
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 80
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}
+EOF
+kubectl create -f nginx.yaml
+kubectl describe pod nginx | grep -i readinesskubectl delete po nginx
+
+# 134. Create nginx pod with containerPort=80 and /healthz=80.
+
+# Answer
+cat << EOF >> nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+    ports:
+    - containerPort: 80
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 80
+    readinessProbe:
+      httpGet:
+        path: /
+        port: 80
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}
+EOF
+kubectl create -f nginx.yaml
+kubectl describe pod nginx | grep -i readiness
+kubectl describe pod nginx | grep -i liveness
+
+# 135. Show all options for readiness and liveness probes.
+
+# Answer
+kubectl explain Pod.spec.containers.livenessProbe
+kubectl explain Pod.spec.containers.readinessProbe
+
+# 136. Create nginx pod that waits 20 seconds before initially checking liveness and readiness probes and checks liveness and readiness probes every 25 seconds.
+
+# Answer
+cat << EOF >> nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+    ports:
+    - containerPort: 80
+    livenessProbe:
+      initialDelaySeconds: 20
+      periodSeconds: 25
+      httpGet:
+        path: /healthz
+        port: 80
+    readinessProbe:
+      initialDelaySeconds: 20
+      periodSeconds: 25
+      httpGet:
+        path: /
+        port: 80
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}
+EOF
+kubectl create -f nginx-pod.yaml
+
+# 137. Create busybox pod that runs “echo I am from busybox pod; sleep 3600;” command and show logs.
+
+# Answer
+kubectl run busybox --restart=Never --image=busybox -- /bin/sh -c "echo I am from busybox pod; sleep 3600;"
+kubectl logs busybox
+
+# 138. Show logs from busybox pod.
+
+# Answer
+kubectl logs busybox
+
+# 139. Show all events sorted by timestamp.
+
+# Answer
+kubectl get events --sort-by=.metadata.creationTimestamp
+
+# 140. Create alpine pod that runs ”while true; do echo ‘Hi I am from alpine’; sleep 5; done” command and show logs.
+
+# Answer
+kubectl run hello --restart=Never --image=alpine -- /bin/sh -c "while true; do echo 'Hi I am from Alpine'; sleep 5;done"
+kubectl logs hello --follow 
+
+# 141. Fix pod not running in https://gist.githubusercontent.com/bbachi/212168375b39e36e2e2984c097167b00/raw/1fd63509c3ae3a3d3da844640fb4cca744543c1c/not-running.yml file.
+
+# Answer
+kubectl create -f https://gist.githubusercontent.com/bbachi/212168375b39e36e2e2984c097167b00/raw/1fd63509c3ae3a3d3da844640fb4cca744543c1c/not-running.yml
+kubectl get pod not-running
+kubectl describe pod not-running
+kubectl set image pod/not-running not-running=nginx
+
+# 142. Find and fix pod not running in https://gist.githubusercontent.com/bbachi/1f001f10337234d46806929d12245397/raw/84b7295fb077f15de979fec5b3f7a13fc69c6d83/problem-pod.yaml file.
+
+# Answer
+kubectl create -f https://gist.githubusercontent.com/bbachi/1f001f10337234d46806929d12245397/raw/84b7295fb077f15de979fec5b3f7a13fc69c6d83/problem-pod.yaml
+kubectl get po --all-namespaces
+kubectl get po -n namespace2
+kubectl set image pod/pod2 pod2=nginx -n namespace2
+kubectl get po -n namespace2
+
+# 143. Show compute and memory usage for top 3 pods.
+
+# Answer
+kubectl top pod --all-namespaces | sort --reverse --key 3 --numeric | head -3
+
 # Services and Networking (13%)
 
 # 144. Create nginx pod with app=nginx label and port=80
