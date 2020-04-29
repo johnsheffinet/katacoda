@@ -1,13 +1,35 @@
 # Observability (18%)
 
-# 132. Create nginx pod with containerPort=80 and / health check on port 80 and delete the pod.
-
+# 132. Create liveness pod with port=80 and http liveness probe on / path and port 80.
+rm liveness.yaml
+cat << EOF >> liveness.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: liveness
+  name: liveness
+spec:
+  containers:
+  - name: liveness
+    image: k8s.gcr.io/liveness
+    ports:
+    - containerPort: 80
+    command["/server"]
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 80
+EOF
+kubectl delete po/liveness
+kubectl create --filename=liveness.yaml && \
+kubectl get po/liveness --watch
 # Answer
+rm nginx.yaml
 cat << EOF >> nginx.yaml
 apiVersion: v1
 kind: Pod
 metadata:
-  creationTimestamp: null
   labels:
     run: nginx
   name: nginx
@@ -24,14 +46,39 @@ spec:
     resources: {}
   dnsPolicy: ClusterFirst
   restartPolicy: Never
-status: {}
 EOF
 kubectl create -f nginx.yaml
 kubectl describe pod nginx | grep -i readiness
-kubectl delete po nginx
+kubectl delete pod nginx
 
-# 133. Create nginx pod with containerPort=80 and /healthz on port 80.
-
+# 133. Create liveness pod with port=80 and http liveness probe on /healthz path and port 80.
+rm liveness.yaml
+cat << EOF >> liveness.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: liveness
+  name: liveness
+spec:
+  containers:
+  - name: liveness
+    image: k8s.gcr.io/liveness
+    args:
+    - /server
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 80
+        httpHeaders:
+        - name: Custom-Header
+          value: Awesome
+      initialDelaySeconds: 3
+      periodSeconds: 3
+EOF
+kubectl delete po/liveness
+kubectl create --filename=liveness.yaml && \
+kubectl get po/liveness --watch
 # Answer
 cat << EOF >> nginx.yaml
 apiVersion: v1
@@ -57,10 +104,60 @@ spec:
 status: {}
 EOF
 kubectl create -f nginx.yaml
-kubectl describe pod nginx | grep -i readinesskubectl delete po nginx
+kubectl describe pod nginx | grep -i readiness
+kubectl delete po nginx
 
-# 134. Create nginx pod with containerPort=80 and /healthz=80.
-
+# 134. Create readiness pod with port=80 and http readiness probe on /healthz path and port 80.
+rm readiness.yaml
+cat << EOF >> readiness.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: readiness
+  name: readiness
+spec:
+  containers:
+  - name: liveness
+    image: k8s.gcr.io/liveness
+    args:
+    - /server
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 80
+        httpHeaders:
+        - name: Custom-Header
+          value: Awesome
+      initialDelaySeconds: 3
+      periodSeconds: 3
+# 132. Create liveness pod with port=80 and http liveness probe on / path and port 80.
+rm liveness.yaml
+cat << EOF >> liveness.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: liveness
+  name: liveness
+spec:
+  containers:
+  - name: liveness
+    image: k8s.gcr.io/liveness
+    ports:
+    - containerPort: 80
+    command["/server"]
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 80
+EOF
+kubectl delete po/liveness
+kubectl create --filename=liveness.yaml && \
+kubectl get po/liveness --watchEOF
+kubectl delete po/readiness
+kubectl create --filename=readiness.yaml && \
+kubectl get po/readiness --watch
 # Answer
 cat << EOF >> nginx.yaml
 apiVersion: v1
@@ -93,14 +190,37 @@ kubectl create -f nginx.yaml
 kubectl describe pod nginx | grep -i readiness
 kubectl describe pod nginx | grep -i liveness
 
-# 135. Show all options for readiness and liveness probes.
-
+# 135. Show documentation for readiness and liveness probes.
+kubectl explain pods.spec.containers.readinessProbe && \
+kubectl explain pods.spec.containers.livenessProbe
 # Answer
 kubectl explain Pod.spec.containers.livenessProbe
 kubectl explain Pod.spec.containers.readinessProbe
 
-# 136. Create nginx pod that waits 20 seconds before initially checking liveness and readiness probes and checks liveness and readiness probes every 25 seconds.
-
+# 136. Create liveness pod with port=80 and http liveness and readiness probes on / path and port 80 that initially waits 20 seconds before checking and thereafter continuously checks every 25 seconds.
+rm liveness.yaml
+cat << EOF >> liveness.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: liveness
+  name: liveness
+spec:
+  containers:
+  - name: liveness
+    image: k8s.gcr.io/liveness
+    ports:
+    - containerPort: 80
+    command["/server"]
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 80
+EOF
+kubectl delete po/liveness
+kubectl create --filename=liveness.yaml && \
+kubectl get po/liveness --watch
 # Answer
 cat << EOF >> nginx.yaml
 apiVersion: v1
@@ -285,26 +405,16 @@ cat << EOF >> nginx.yaml
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: nginx
+  name: access-nginx
 spec:
   podSelector:
     matchLabels:
       app: nginx
-  policyTypes:
-  - Ingress
-  - Egress
   ingress:
   - from:
     - podSelector:
         matchLabels:
-          access: nginx
-  egress:
-  - to:
-    - ipBlock:
-        cidr: 10.0.0.0/24
-    ports:
-    - protocol: TCP
-      port: 5978
+          access: "true"
 EOF
 kubectl create --filename=nginx.yaml && \
 kubectl get networkpolicy/nginx
