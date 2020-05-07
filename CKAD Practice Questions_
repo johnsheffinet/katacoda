@@ -1,6 +1,8 @@
 # Observability (18%)
-
-# 132. Create liveness pod with port=80 and http liveness probe on / path and port 80.
+kubectl explain pod.spec.containers.livenessProbe
+kubectl explain pod.spec.containers.readinessProbe&
+ 
+# 132. Create liveness pod with port 80 and http liveness probe on / path and port 80.
 rm liveness.yaml
 cat << EOF >> liveness.yaml
 apiVersion: v1
@@ -11,11 +13,11 @@ metadata:
   name: liveness
 spec:
   containers:
-  - name: liveness
+  - command["/server"]
     image: k8s.gcr.io/liveness
+    name: liveness
     ports:
     - containerPort: 80
-    command["/server"]
     livenessProbe:
       httpGet:
         path: /
@@ -23,6 +25,7 @@ spec:
 EOF
 kubectl delete po/liveness
 kubectl create --filename=liveness.yaml && \
+kubectl wait --for=condition=Ready po/liveness && \
 kubectl get po/liveness --watch
 # Answer
 rm nginx.yaml
