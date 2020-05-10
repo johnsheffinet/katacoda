@@ -1,12 +1,497 @@
+# Configuration (18%)
+
+# 105. List all configmaps in cluster
+kubectl get cm —all-namespaces
+# Answer
+kubectl get cm
+
+# 106. Create myconfigmap configmap with appname=myapp literal
+kubectl create cm myconfigmap —from-literal=appname=myapp
+# Answer
+kubectl create cm myconfigmap —from-literal=appname=myapp
+
+# 107. Show myconfigmap configmap
+kubectl get cm/myconfigmap —output=yaml
+# Answer
+kubectl describe cm myconfigmap
+
+# 108. Delete myconfigmap configmap
+kubectl delete cm/myconfigmap
+# Answer
+kubectl delete cm myconfigmap
+
+# 109. Create config.txt file with key1=value1 and key2=value2 literals and verify config.txt content is created
+cat << EOF >> config.txt
+key1=value1
+key2=value2
+EOF
+cat config.txt
+# Answer
+cat << EOF >> config.txt 
+key1=value1
+key2=value2
+EOF
+cat config.txt
+
+# 110. Create keyvalcfgmap configmap from config.txt file and verify keyvalcfgmap configmap is created
+kubectl create cm keyvalcfgmap —from-file=config.txt && \
+kubectl get cm/keyvalcfgmap —output=yaml
+# Answer
+kubectl create cm keyvalcfgmap —from-file=config.txt
+kubectl get cm keyvalcfgmap -o yaml
+
+# 111. Create nginx pod with environment variables from keyvalcfgmap configmap that runs “env” command to verify environment variables are created and delete nginx pod
+kubectl run nginx —generator=run-pod/v1 —image=nginx —dry-run —output=yaml — /bin/sh -c “env”
+cat << EOF >> nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      command: [ “/bin/sh”, “-c”, “env” ]
+      envFrom:
+      - configMapRef:
+          name: keyvalcfgmap
+  restartPolicy: Never
+EOF
+kubectl create —filename=nginx.yaml && \
+kubectl wait —for=condition=Ready po/nginx && \
+kubectl logs nginx && \
+kubectl delete po/nginx
+# Answer
+kubectl run nginx —restart=Never —image=nginx —dry-run -o yaml > nginx-pod.yml
+kubectl create -f nginx-pod.yml
+kubectl exec -it nginx — env
+kubectl delete po nginx
+
+# 112. Create file.env file with var1=val1 literals; Create envcfgmap configmap with environment variables from file.env file and verify envcfgmap configmap is created
+cat << EOF >> file.env
+var1=val1
+EOF
+kubectl create cm envcfgmap —from-env-file=file.env && \
+kubectl get cm/envcfgmap —output=yaml
+# Answer
+echo var1=val1 > file.env
+cat file.env
+kubectl create cm envcfgmap —from-env-file=file.env
+kubectl get cm envcfgmap -o yaml —export
+
+# 113. Create nginx pod with environment variables from envcfgmap configmap that runs “env” command to verify environment variables are created and delete nginx pod
+kubectl run nginx —generator=run-pod/v1 —image=nginx —dry-run —output=yaml -it —rm — /bin/sh -c “env”
+cat << EOF >> nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      command: [ “/bin/sh”, “-c”, “env” ]
+      envFrom:
+      - configMapRef:
+          name: envcfgmap
+  restartPolicy: Never
+EOF
+kubectl create —filename=nginx.yaml && \
+kubectl wait —for=condition=Ready po/nginx && \
+kubectl logs nginx && \
+kubectl delete po/nginx
+# Answer
+kubectl run nginx —restart=Never —image=nginx —dry-run -o yaml > nginx-pod.yml
+kubectl create -f nginx-pod.yml
+kubectl exec -it nginx — env
+kubectl delete po nginx
+
+# 114. Create cfgvolume configmap with var1=val1 and var2=val2 literals; Ceate nginx pod with nginx-volume persistent volume thats reads environment variables from configvolume configmap on /etc/cfg path
+cat << EOF >> nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      command: [ “/bin/sh”, “-c”, “ls /etc/cfg/“ ]
+      volumeMounts:
+      - name: nginx-volume
+        mountPath: /etc/cfg
+  volumes:
+    - name: nginx-volume
+      configMap:
+        name: cfgvolume
+  restartPolicy: Never
+EOF
+kubectl create cm cfgvolume —from-literal=var1=val1 —from-literal=var2=val2 && \
+kubectl get cm/cfgvolume —output=yaml && \
+kubectl create —filename=nginx.yaml && \
+kubectl wait —for=condition=Ready po/nginx && \
+kubectl logs nginx
+# Answer
+kubectl create cm cfgvolume —from-literal=var1=val1 —from-literal=var2=val2// verify the configmap
+kubectl describe cm cfgvolume// create the config map 
+kubectl create -f nginx-volume.yml// exec into the pod
+kubectl exec -it nginx — /bin/sh// check the path
+cd /etc/cfg
+ls
+
+# 115. Create busybox pod that runs “sleep 3600” command with user ID 1000 and group ID 2000.
+cat << EOF >> busybox.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox
+spec:
+  securityContect:
+    runAsUser: 1000
+    runAsGroup: 3000
+    fsGroup: 2000
+  containers:
+    - name: busybox
+      image: busybox
+      command: [ “/bin/sh”, “-c”, “id; sleep 3600” ]
+      securityContext:
+        allowPrivilegeEscalation: false
+  restartPolicy: Never
+EOF
+kubectl create —filename=busybox.yaml && \ 
+kubectl wait —for=condition=Ready po/busybox && \ 
+kubectl logs busybox
+# Answer
+kubectl run busybox —restart=Never —image=busybox —dry-run -o yaml — /bin/sh -c “sleep 3600;” > busybox.yamll
+kubectl create -f busybox.yaml
+kubectl exec -it busybox — /bin/sh -c “id”
+
+# 116. Create busybox pod that runs busybox container with 1001 user ID and 3001 group ID and verify container security context overrides pod security context.
+cat << EOF >> busybox.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox
+spec:
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 3000
+    fsGroup: 2000
+  containers:
+    - name: busybox
+      image: busybox
+      command: [ “/bin/sh”, “-c”, “id; sleep 3600” ]
+      securityContext:
+        runAsUser: 1001
+        runAsGroup: 3001
+        fsGroup: 2001
+        allowPrivilegeEscalation: false
+  restartPolicy: Never
+EOF
+kubectl create —filename=busybox.yaml && \ 
+kubectl wait —for=condition=Ready po/busybox && \ 
+kubectl logs busybox
+# Answer
+kubectl run busybox —image=busybox —restart=Never —dry-run -o yaml — /bin/sh -c “sleep 3600;” > busybox.yml
+kubectl create -f busybox.yml
+kubectl exec busybox -it — /bin/sh -c “id”
+
+# 117. Create nginx pod with NET_ADMIN and SYS_TIME Linux capabilities.
+cat << EOF >> nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  securityContect:
+    runAsUser: 1000
+    runAsGroup: 3000
+    fsGroup: 2000
+  containers:
+    - name: nginx
+      image: nginx
+      command: [ “/bin/sh”, “-c”, “cat /proc/1/status; sleep 3600” ]
+      securityContext:
+        capabilities:
+          add: [“NET_ADMIN”, “SYS_TIME”]
+        allowPrivilegeEscalation: false
+  restartPolicy: Never
+EOF
+kubectl create —filename=nginx.yaml && \ 
+kubectl wait —for=condition=Ready po/nginx && \ 
+kubectl logs nginx
+# Answer
+kubectl run nginx —image=nginx —restart=Never —dry-run -o yaml > nginx.yml
+kubectl create -f nginx.yml
+kubectl exec -it nginx — sh
+cd /proc/1
+cat status
+// you should see these values
+CapPrm: 00000000aa0435fb
+CapEff: 00000000aa0435fb
+
+# 118. Create nginx pod with 100Mi memory request and 200Mi memory limit.
+cat << EOF >> nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  securityContect:
+    runAsUser: 1000
+    runAsGroup: 3000
+    fsGroup: 2000
+  containers:
+    - name: nginx
+      image: nginx
+      command: [ “/bin/sh”, “-c”, “id; sleep 3600” ]
+      resources:
+        limits:
+          memory: 200Mi
+        requests:
+          memory: 100Mi
+      securityContext:
+        allowPrivilegeEscalation: false
+  restartPolicy: Never
+EOF
+kubectl create —filename=nginx.yaml && \ 
+kubectl wait —for=condition=Ready po/nginx && \ 
+kubectl top po/nginx
+# Answer
+// create a yml file
+kubectl run nginx —image=nginx —restart=Never —dry-run -o yaml > nginx.yml
+// add the resources section and create
+kubectl create -f nginx.yml
+// verify
+kubectl top pod
+
+# 119. Create nginx pod with 500m cpu request and 1000m cpu limit.
+cat << EOF >> nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  securityContect:
+    runAsUser: 1000
+    runAsGroup: 3000
+    fsGroup: 2000
+  containers:
+    - name: nginx
+      image: nginx
+      command: [ “/bin/sh”, “-c”, “id; sleep 3600” ]
+      resources:
+        limits:
+          cpu: 1000m
+        requests:
+          cpu: 500m
+  restartPolicy: Never
+EOF
+kubectl create —filename=nginx.yaml && \ 
+kubectl wait —for=condition=Ready po/nginx && \ 
+kubectl top po/nginx
+# Answer
+// create a yml file
+kubectl run nginx —image=nginx —restart=Never —dry-run -o yaml > nginx.yml
+// add the resources section and create
+kubectl create -f nginx.yml
+// verify
+kubectl top pod
+
+# 120. Create nginx pod with 500m cpu request, 1000m cpu limit, 100Mi memory request and 200Mi memory limit.
+cat << EOF >> busybox.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox
+spec:
+  securityContect:
+    runAsUser: 1000
+    runAsGroup: 3000
+    fsGroup: 2000
+  containers:
+    - name: busybox
+      image: busybox
+      command: [ “/bin/sh”, “-c”, “sleep 3600” ]
+      resources:
+        limits:
+          cpu: 1000m
+          memory: 200Mi
+        requests:
+          cpu: 500m
+          memory: 100Mi
+  restartPolicy: Never
+EOF
+kubectl create —filename=busybox.yaml && \ 
+kubectl wait —for=condition=Ready po/busybox && \ 
+kubectl logs busybox
+# Answer
+// create a yml file
+kubectl run nginx —image=nginx —restart=Never —dry-run -o yaml > nginx.yml
+// add the resources section and create
+kubectl create -f nginx.yml
+// verify
+kubectl top pod
+
+# 121. Create nginx pod with 100Gi memory request and 200Gi memory limit and verify failure
+cat << EOF >> nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  securityContect:
+    runAsUser: 1000
+    runAsGroup: 3000
+    fsGroup: 2000
+  containers:
+    - name: busybox
+      image: busybox
+      command: [ “/bin/sh”, “-c”, “id; sleep 3600” ]
+      securityContext:
+        allowPrivilegeEscalation: false
+  restartPolicy: Never
+EOF
+kubectl create —filename=busybox.yaml && \ 
+kubectl wait —for=condition=Ready po/busybox && \ 
+kubectl logs busybox
+# Answer
+// create a yml file
+kubectl run nginx —image=nginx —restart=Never —dry-run -o yaml > nginx.yml
+// add the resources section and create
+kubectl create -f nginx.yml
+// verify
+kubectl describe po nginx
+// you can see pending state
+
+# 122. Create a secret mysecret with values user=myuser and password=mypassword
+
+# Answer
+kubectl create secret generic my-secret —from-literal=username=user —from-literal=password=mypassword
+
+# 123. List the secrets in all namespaces
+
+# Answer
+kubectl get secret —all-namespaces
+
+# 124. Output the yaml of the secret created above
+
+# Answer
+kubectl get secret my-secret -o yaml
+
+# 125. Create an nginx pod which reads username as the environment variable
+cat << EOF >> busybox.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox
+spec:
+  securityContect:
+    runAsUser: 1000
+    runAsGroup: 3000
+    fsGroup: 2000
+  containers:
+    - name: busybox
+      image: busybox
+      command: [ “/bin/sh”, “-c”, “id; sleep 3600” ]
+      securityContext:
+        allowPrivilegeEscalation: false
+  restartPolicy: Never
+EOF
+kubectl create —filename=busybox.yaml && \ 
+kubectl wait —for=condition=Ready po/busybox && \ 
+kubectl logs busybox
+# Answer
+// create a yml file
+kubectl run nginx —image=nginx —restart=Never —dry-run -o yaml > nginx.yml
+// add env section below and create
+kubectl create -f nginx.yml
+//verify
+kubectl exec -it nginx — env
+
+# 126. Create an nginx pod which loads the secret as environment variables
+cat << EOF >> busybox.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox
+spec:
+  securityContect:
+    runAsUser: 1000
+    runAsGroup: 3000
+    fsGroup: 2000
+  containers:
+    - name: busybox
+      image: busybox
+      command: [ “/bin/sh”, “-c”, “id; sleep 3600” ]
+      securityContext:
+        allowPrivilegeEscalation: false
+  restartPolicy: Never
+EOF
+kubectl create —filename=busybox.yaml && \ 
+kubectl wait —for=condition=Ready po/busybox && \ 
+kubectl logs busybox
+# Answer
+// create a yml file
+kubectl run nginx —image=nginx —restart=Never —dry-run -o yaml > nginx.yml
+// add env section below and create
+kubectl create -f nginx.yml
+//verify
+kubectl exec -it nginx — env
+
+# 127. List all the service accounts in the default namespace
+
+# Answer
+kubectl get sa
+
+# 128. List all the service accounts in all namespaces
+
+# Answer
+kubectl get sa —all-namespaces
+
+# 129. Create a service account called admin
+
+# Answer
+kubectl create sa admin
+
+# 130. Output the YAML file for the service account we just created
+
+# Answer
+kubectl get sa admin -o yaml
+
+# 131. Create busybox pod that runs “sleep 3600” command /ith the service account admin and verify
+cat << EOF >> busybox.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox
+spec:
+  securityContect:
+    runAsUser: 1000
+    runAsGroup: 3000
+    fsGroup: 2000
+  containers:
+    - name: busybox
+      image: busybox
+      command: [ “/bin/sh”, “-c”, “id; sleep 3600” ]
+      securityContext:
+        allowPrivilegeEscalation: false
+  restartPolicy: Never
+EOF
+# Answer
+kubectl run busybox —image=busybox —restart=Never —dry-run -o yaml — /bin/sh -c “sleep 3600” > busybox.yml
+kubectl create -f busybox.yml// verify
+kubectl describe po busybox
+
 # Observability (18%)
-kubectl explain pod.spec.containers
 kubectl explain pod.spec.containers.livenessProbe && \
 kubectl explain pod.spec.containers.readinessProbe && \
 kubectl explain pod.spec.containers.startupProbe
  
 # 132. Create liveness pod with port 80 and http liveness probe on / path and port 80.
-rm liveness.yaml
-cat << EOF >> liveness.yaml
+export f="liveness.yaml"
+rm $f
+cat << EOF >> $f
 apiVersion: v1
 kind: Pod
 metadata:
@@ -26,9 +511,19 @@ spec:
         path: /
         port: 80
 EOF
-kubectl delete --filename=liveness.yaml
-kubectl create --filename=liveness.yaml && \
-kubectl get --filename=liveness.yaml --watch
+kubectl delete --filename=$f
+kubectl create --filename=$f && \
+kubectl get --filename=$f --watch
+
+kubectl patch pod valid-pod -p '{"spec":{"containers":[{"name":"kubernetes-serve-hostname","image":"new image"}]}}'
+
+kubectl delete po/liveness
+kubectl run liveness --generator=run-pod/v1 --image=k8s.gcr.io/liveness --overrides='{"spec":{"containers":[{"name":"liveness","livenessProbe":{"httpGet":{"path": "/", "port": 80}}}]}}' =--port=80 -- /bin/sh -c "/server" && \
+kubectl get po/liveness
+
+kubectl patch po/liveness --patch='{"spec":{"containers":[{"name":"liveness","livenessProbe":{"httpGet":{"path": "/", "port": 80}}}]}}' && \
+
+"{'spec':{'containers':[{'name':'liveness',"livenessProbe":"httpGet":{"path": "/", "port": 80}}]}}"
 # Answer
 rm nginx.yaml
 cat << EOF >> nginx.yaml
@@ -57,8 +552,9 @@ kubectl describe pod nginx | grep -i readiness
 kubectl delete pod nginx
 
 # 133. Create liveness pod with port 80 and http liveness probe on /healthz path and port 80.
-rm liveness.yaml
-cat << EOF >> liveness.yaml
+export f="liveness.yaml"
+rm $f
+cat << EOF >> $f
 apiVersion: v1
 kind: Pod
 metadata:
@@ -78,9 +574,9 @@ spec:
         path: /healthz
         port: 80
 EOF
-kubectl delete --filename=liveness.yaml
-kubectl create --filename=liveness.yaml && \
-kubectl get --filename=liveness.yaml --watch
+kubectl delete --filename=$f
+kubectl create --filename=$f && \
+kubectl get --filename=$f --watch
 # Answer
 rm nginx.yaml
 cat << EOF >> nginx.yaml
@@ -111,8 +607,9 @@ kubectl describe pod nginx | grep -i readiness
 kubectl delete po nginx
 
 # 134. Create liveness pod with port 80 and http readiness probe on /healthz path and port 80.
-rm liveness.yaml
-cat << EOF >> liveness.yaml
+export f="liveness.yaml"
+rm $f
+cat << EOF >> $f
 apiVersion: v1
 kind: Pod
 metadata:
@@ -132,9 +629,9 @@ spec:
         path: /healthz
         port: 80
 EOF
-kubectl delete --filename=liveness.yaml
-kubectl create --filename=liveness.yaml && \
-kubectl get --filename=liveness.yaml --watch
+kubectl delete --filename=$f
+kubectl create --filename=$f && \
+kubectl get --filename=$f --watch
 # Answer
 rm nginx.yaml
 cat << EOF >> nginx.yaml
@@ -176,8 +673,9 @@ kubectl explain Pod.spec.containers.livenessProbe
 kubectl explain Pod.spec.containers.readinessProbe
 
 # 136. Create liveness pod with port 80 and http liveness and readiness probes on / path and port 80 that initially waits 20 seconds before checking and thereafter continuously checks every 25 seconds.
-rm liveness.yaml
-cat << EOF >> liveness.yaml
+export f="liveness.yaml"
+rm $f
+cat << EOF >> $f
 apiVersion: v1
 kind: Pod
 metadata:
@@ -205,9 +703,9 @@ spec:
       initialDelaySeconds: 20
       periodSeconds: 25
 EOF
-kubectl delete --filename=liveness.yaml
-kubectl create --filename=liveness.yaml && \
-kubectl get --filename=liveness.yaml --watch
+kubectl delete --filename=$f
+kubectl create --filename=$f && \
+kubectl get --filename=$f --watch
 # Answer
 rm nginx.yaml
 cat << EOF >> nginx.yaml
@@ -272,54 +770,53 @@ kubectl run hello --restart=Never --image=alpine -- /bin/sh -c "while true; do e
 kubectl logs hello --follow 
 
 # 141. Find and fix pod not running in https://gist.githubusercontent.com/bbachi/212168375b39e36e2e2984c097167b00/raw/1fd63509c3ae3a3d3da844640fb4cca744543c1c/not-running.yml file.
-kubectl delete --filename=https://gist.githubusercontent.com/bbachi/212168375b39e36e2e2984c097167b00/raw/1fd63509c3ae3a3d3da844640fb4cca744543c1c/not-running.yml
-kubectl create --filename=https://gist.githubusercontent.com/bbachi/212168375b39e36e2e2984c097167b00/raw/1fd63509c3ae3a3d3da844640fb4cca744543c1c/not-running.yml && \
-kubectl wait --for=condition=Ready po/pod1 --namespace=namespace1
-kubectl wait --for=condition=Ready po/pod2 --namespace=namespace2
-kubectl wait --for=condition=Ready po/pod3 --namespace=namespace3
-kubectl wait --for=condition=Ready po/pod4 --namespace=namespace4
-kubectl get --filename=https://gist.githubusercontent.com/bbachi/1f001f10337234d46806929d12245397/raw/84b7295fb077f15de979fec5b3f7a13fc69c6d83/problem-pod.yaml
+export f="https://gist.githubusercontent.com/bbachi/212168375b39e36e2e2984c097167b00/raw/1fd63509c3ae3a3d3da844640fb4cca744543c1c/not-running.yml"
+kubectl delete --filename=$f
+kubectl create --filename=$f
+kubectl get --filename=$f
 
-kubectl describe po/pod2 --namespace=namespace2
+kubectl describe po/not-running
 
-kubectl set image po/pod2 --namespace=namespace2 pod2=nginx &&
-kubectl wait --for=condition=Ready po/pod2 --namespace=namespace2 && \
-kubectl get --filename=https://gist.githubusercontent.com/bbachi/1f001f10337234d46806929d12245397/raw/84b7295fb077f15de979fec5b3f7a13fc69c6d83/problem-pod.yaml 
+kubectl set image po/not-running not-running=nginx &&
+kubectl wait --for=condition=Ready po/not-running && \
+kubectl get --filename=$f
 # Answer
-kubectl create -f https://gist.githubusercontent.com/bbachi/212168375b39e36e2e2984c097167b00/raw/1fd63509c3ae3a3d3da844640fb4cca744543c1c/not-running.yml
+kubectl create -f $f
 kubectl get pod not-running
 kubectl describe pod not-running
 kubectl set image pod/not-running not-running=nginx
 
 # 142. Find and fix pod not running in https://gist.githubusercontent.com/bbachi/1f001f10337234d46806929d12245397/raw/84b7295fb077f15de979fec5b3f7a13fc69c6d83/problem-pod.yaml file.
-kubectl delete --filename=https://gist.githubusercontent.com/bbachi/1f001f10337234d46806929d12245397/raw/84b7295fb077f15de979fec5b3f7a13fc69c6d83/problem-pod.yaml
-kubectl create --filename=https://gist.githubusercontent.com/bbachi/1f001f10337234d46806929d12245397/raw/84b7295fb077f15de979fec5b3f7a13fc69c6d83/problem-pod.yaml && \
+export f="https://gist.githubusercontent.com/bbachi/1f001f10337234d46806929d12245397/raw/84b7295fb077f15de979fec5b3f7a13fc69c6d83/problem-pod.yaml"
+kubectl delete --filename=$f
+kubectl create --filename=$f && \
 kubectl wait --for=condition=Ready po/pod1 --namespace=namespace1
 kubectl wait --for=condition=Ready po/pod2 --namespace=namespace2
 kubectl wait --for=condition=Ready po/pod3 --namespace=namespace3
 kubectl wait --for=condition=Ready po/pod4 --namespace=namespace4
-kubectl get --filename=https://gist.githubusercontent.com/bbachi/1f001f10337234d46806929d12245397/raw/84b7295fb077f15de979fec5b3f7a13fc69c6d83/problem-pod.yaml
+kubectl get --filename=$f
 
 kubectl describe po/pod2 --namespace=namespace2
 
 kubectl set image po/pod2 --namespace=namespace2 pod2=nginx &&
 kubectl wait --for=condition=Ready po/pod2 --namespace=namespace2 && \
-kubectl get --filename=https://gist.githubusercontent.com/bbachi/1f001f10337234d46806929d12245397/raw/84b7295fb077f15de979fec5b3f7a13fc69c6d83/problem-pod.yaml 
+kubectl get --filename=$f
 # Answer
-kubectl create -f https://gist.githubusercontent.com/bbachi/1f001f10337234d46806929d12245397/raw/84b7295fb077f15de979fec5b3f7a13fc69c6d83/problem-pod.yaml
+kubectl create -f $f
 kubectl get po --all-namespaces
 kubectl get po -n namespace2
 kubectl set image pod/pod2 pod2=nginx -n namespace2
 kubectl get po -n namespace2
 
 # 143. Show compute and memory usage for top 3 pods.
-kubectl top po
+kubectl top po --all-namespaces | sort --key 3 --numeric --reverse | head --lines 3
 # Answer
 kubectl top pod --all-namespaces | sort --reverse --key 3 --numeric | head -3
 
 # Services and Networking (13%)
+kubectl explain pod.spec.containers.ports
 
-# 144. Create nginx pod with app=nginx label and port=80
+# 144. Create nginx pod with app label as nginx and port 80
 kubectl delete po/nginx
 kubectl run nginx --generator=run-pod/v1 --image=nginx --labels="app=nginx" --port=80 && \
 kubectl wait --for=condition=Ready po/nginx && \
@@ -351,7 +848,7 @@ status: {}
 EOF
 kubectl create -f nginx.yaml
 
-# 145. Create nginx service with app=nginx selector 
+# 145. Create nginx service with app selector as nginx  
 kubectl delete svc/nginx
 kubectl create svc clusterip nginx --tcp=80:80 && \
 kubectl get svc/nginx --output=wide
