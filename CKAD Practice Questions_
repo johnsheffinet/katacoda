@@ -1,7 +1,7 @@
 # Configuration (18%)
 
 # 105. List all configmaps in cluster
-kubectl get cm —all-namespaces
+kubectl get cm --all-namespaces
 # Answer
 kubectl get cm
 
@@ -52,9 +52,28 @@ kubectl run po nginx --generator=run-pod/v1 --image=nginx \
 kubectl wait --for=condition=Ready po/nginx && \
 kubectl logs nginx
 # Answer
-kubectl run nginx —restart=Never —image=nginx —dry-run -o yaml > nginx.yml
-// add envFrom
-kubectl create -f nginx.yml
+rm nginx.yaml
+cat << EOF >> nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+    resources: {}
+    envFrom:
+    - configMapRef:
+        name: keyvalcfgmap
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}
+EOF
+kubectl create -f nginx.yaml
 kubectl exec -it nginx -- env
 kubectl delete po nginx
 
@@ -71,7 +90,7 @@ kubectl get cm/envcfgmap
 echo var1=val1 > config.env
 cat config.env
 kubectl create cm envcfgmap --from-env-file=config.env
-kubectl get cm envcfgmap -o yaml —export
+kubectl get cm envcfgmap -o yaml --export
 
 # 113. Create nginx pod with environment variables from envcfgmap configmap and runs "env" command
 kubectl delete po/nginx
@@ -80,10 +99,32 @@ kubectl run po nginx --generator=run-pod/v1 --image=nginx \
 kubectl wait --for=condition=Ready po/nginx && \
 kubectl logs nginx
 # Answer
-kubectl run nginx —restart=Never —image=nginx —dry-run -o yaml > nginx-pod.yml
-// add envFrom
-kubectl create -f nginx-pod.yml
-kubectl exec -it nginx — env
+rm nginx.yaml
+cat << EOF >> nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+    resources: {}
+    env:
+    - name: ENVIRONMENT
+      valueFrom:
+        configMapKeyRef:
+          name: envcfgmap
+          key: var1
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}
+EOF
+kubectl create -f nginx.yaml
+kubectl exec -it nginx -- env
 kubectl delete po nginx
 
 # 114. Create cfgvolume configmap with var1 literal as val1 and var2 literal as val2; Create nginx pod with nginx-volume persistent volume thats reads environment variables from configvolume configmap on /etc/cfg path
@@ -97,37 +138,64 @@ kubectl run po nginx --generator=run-pod/v1 --image=nginx \
 kubectl wait --for=condition=Ready po/nginx && \
 kubectl logs nginx
 # Answer
+rm nginx.yaml
+cat << EOF >> nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+spec:
+  volumes:
+  - name: nginx-volume
+    configMap:
+      name: cfgvolume
+  containers:
+  - image: nginx
+    name: nginx
+    resources: {}
+    volumeMounts:
+    - name: nginx-volume
+      mountPath: /etc/cfg
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}
+EOF
 kubectl create cm cfgvolume --from-literal=var1=val1 --from-literal=var2=val2
 kubectl describe cm cfgvolumemap 
-kubectl create -f nginx-volume.yml
+kubectl create -f nginx.yaml
 kubectl exec -it nginx -- /bin/sh/ -c "cd /etc/cfg; ls"
 
-# 115. Create busybox pod that runs “sleep 3600” command with user ID 1000 and group ID 2000.
+# 115. Create busybox pod that runs “id; sleep 3600” command with user ID 1000 and group ID 2000.
+kubectl delete po/busybox
+kubectl run po busybox --generator=run-pod/v1 --image=busybox --command -- /bin/sh -c "id; sleep3600" \
+--overrides='{"apiVersion":"v1","spec":{"securityContext":{"runAsUser":1000,"runAsGroup":3000,"fsGroup":2000}}}' && \
+kubectl wait --for=condition=Ready po/busybox && \
+kubectl logs busybox
+# Answer
+rm busybox.yaml
 cat << EOF >> busybox.yaml
 apiVersion: v1
 kind: Pod
 metadata:
   name: busybox
 spec:
-  securityContect:
+  securityContext:
     runAsUser: 1000
     runAsGroup: 3000
     fsGroup: 2000
   containers:
     - name: busybox
       image: busybox
-      command: [ “/bin/sh”, “-c”, “id; sleep 3600” ]
+      command: [ "/bin/sh", "-c", "id; sleep 3600" ]
       securityContext:
         allowPrivilegeEscalation: false
   restartPolicy: Never
 EOF
-kubectl create —filename=busybox.yaml && \ 
-kubectl wait —for=condition=Ready po/busybox && \ 
-kubectl logs busybox
-# Answer
-kubectl run busybox —restart=Never —image=busybox —dry-run -o yaml — /bin/sh -c “sleep 3600;” > busybox.yamll
 kubectl create -f busybox.yaml
-kubectl exec -it busybox — /bin/sh -c “id”
+kubectl exec -it busybox -- /bin/sh -c “id”
 
 # 116. Create busybox pod that runs busybox container with 1001 user ID and 3001 group ID and verify container security context overrides pod security context.
 cat << EOF >> busybox.yaml
