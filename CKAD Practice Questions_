@@ -131,7 +131,7 @@ kubectl create -f nginx.yaml
 kubectl exec -it nginx -- env
 kubectl delete po nginx
 
-# 114. Create cfgvolume configmap with var1 literal as val1 and var2 literal as val2; Create nginx pod with nginx-volume persistent volume thats reads environment variables from configvolume configmap on /etc/cfg path
+# 114. Create cfgvolume configmap with var1 literal as val1 and var2 literal as val2; Create nginx pod with nginx-volume persistent volume with environment variables from configvolume configmap on /etc/cfg path
 kubectl delete cm/cfgvolume
 kubectl create cm cfgvolume --from-literal="var1=val1" --from-literal="var2=val2" && \
 kubectl get cm/cfgvolume
@@ -279,7 +279,7 @@ CapEff: 00000000aa0435fb
 kubectl delete po/nginx
 kubectl run po nginx --generator=run-pod/v1 --image=nginx \
 --overrides='{"apiVersion":"v1","spec":{"containers":[{"image":"nginx","name":"nginx","resources":{"requests":{"memory":"100Mi"},"limits":{"memory":"200Mi"}}}]}}' && \ 
-kubectl wait —for=condition=Ready po/nginx && \ 
+kubectl wait --for=condition=Ready po/nginx && \ 
 kubectl top po
 # Answer
 rm nginx.yaml
@@ -307,222 +307,220 @@ EOF
 kubectl create -f nginx.yaml
 kubectl top pod
 
-# 119. Create nginx pod with 500m cpu request and 1000m cpu limit.
+# 119. Create nginx pod with 500m cpu request and 1000m cpu limit
+kubectl delete po/nginx
+kubectl run nginx --generator=run-pod/v1 --image=nginx \
+--overrides='{"apiVersion":"v1","spec":{"containers":[{"image":"nginx","name":"nginx","resources":{"requests":{"cpu":"0.5"},"limits":{"cpu":"1"}}}]}}' && \
+kubectl wait --for=condition=Ready po/nginx && \
+kubectl top po
+# Answer
+rm nginx.yaml
 cat << EOF >> nginx.yaml
 apiVersion: v1
 kind: Pod
 metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
   name: nginx
 spec:
-  securityContect:
-    runAsUser: 1000
-    runAsGroup: 3000
-    fsGroup: 2000
   containers:
-    - name: nginx
-      image: nginx
-      command: [ “/bin/sh”, “-c”, “id; sleep 3600” ]
-      resources:
-        limits:
-          cpu: 1000m
-        requests:
-          cpu: 500m
+  - image: nginx
+    name: nginx
+    resources:
+      requests:
+        cpu: "0.5"
+      limits:
+        cpu: "1"
+  dnsPolicy: ClusterFirst
   restartPolicy: Never
+status: {}
 EOF
-kubectl create —filename=nginx.yaml && \ 
-kubectl wait —for=condition=Ready po/nginx && \ 
-kubectl top po/nginx
-# Answer
-// create a yml file
-kubectl run nginx —image=nginx —restart=Never —dry-run -o yaml > nginx.yml
-// add the resources section and create
-kubectl create -f nginx.yml
-// verify
+kubectl create -f nginx.yaml
 kubectl top pod
 
 # 120. Create nginx pod with 500m cpu request, 1000m cpu limit, 100Mi memory request and 200Mi memory limit.
-cat << EOF >> busybox.yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: busybox
-spec:
-  securityContect:
-    runAsUser: 1000
-    runAsGroup: 3000
-    fsGroup: 2000
-  containers:
-    - name: busybox
-      image: busybox
-      command: [ “/bin/sh”, “-c”, “sleep 3600” ]
-      resources:
-        limits:
-          cpu: 1000m
-          memory: 200Mi
-        requests:
-          cpu: 500m
-          memory: 100Mi
-  restartPolicy: Never
-EOF
-kubectl create —filename=busybox.yaml && \ 
-kubectl wait —for=condition=Ready po/busybox && \ 
-kubectl logs busybox
+kubectl delete po/nginx
+kubectl run nginx --generator=run-pod/v1 --image=nginx \
+--overrides='{"apiVersion":"v1","spec":{"containers":[{"image":"nginx","name":"nginx","resources":{"requests":{"memory":"100Mi","cpu":"0.5"},"limits":{"memory":"200Mi","cpu":"1"}}}]}}' && \
+kubectl wait --for=condition=Ready po/nginx && \
+kubectl top po
 # Answer
-// create a yml file
-kubectl run nginx —image=nginx —restart=Never —dry-run -o yaml > nginx.yml
-// add the resources section and create
-kubectl create -f nginx.yml
-// verify
-kubectl top pod
-
-# 121. Create nginx pod with 100Gi memory request and 200Gi memory limit and verify failure
+rm nginx.yaml
 cat << EOF >> nginx.yaml
 apiVersion: v1
 kind: Pod
 metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
   name: nginx
 spec:
-  securityContect:
-    runAsUser: 1000
-    runAsGroup: 3000
-    fsGroup: 2000
   containers:
-    - name: busybox
-      image: busybox
-      command: [ “/bin/sh”, “-c”, “id; sleep 3600” ]
-      securityContext:
-        allowPrivilegeEscalation: false
+  - image: nginx
+    name: nginx
+    resources:
+      requests:
+        memory: "100Mi"
+        cpu: "0.5"
+      limits:
+        memory: "200Mi"
+        cpu: "1"
+  dnsPolicy: ClusterFirst
   restartPolicy: Never
+status: {}
 EOF
-kubectl create —filename=busybox.yaml && \ 
-kubectl wait —for=condition=Ready po/busybox && \ 
-kubectl logs busybox
+kubectl create -f nginx.yaml
+kubectl top pod
+
+# 121. Create nginx pod with 100Gi memory request and 200Gi memory limit and create failure
+kubectl delete po/nginx
+kubectl run nginx --generator=run-pod/v1 --image=nginx \
+--overrides='{"apiVersion":"v1","spec":{"containers":[{"image":"nginx","name":"nginx","resources":{"requests":{"memory":"100Gi","cpu":"0.5"},"limits":{"memory":"200Gi","cpu":"1"}}}]}}' && \
+kubectl wait --for=condition=Ready po/nginx && \
+kubectl top po
 # Answer
-// create a yml file
-kubectl run nginx —image=nginx —restart=Never —dry-run -o yaml > nginx.yml
-// add the resources section and create
-kubectl create -f nginx.yml
-// verify
-kubectl describe po nginx
-// you can see pending state
+rm nginx.yaml
+cat << EOF >> nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+    resources:
+      requests:
+        memory: "100Gi"
+        cpu: "0.5"
+      limits:
+        memory: "200Gi"
+        cpu: "1"
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}
+EOF
+kubectl create -f nginx.yaml
+kubectl describe po/nginx
 
-# 122. Create a secret mysecret with values user=myuser and password=mypassword
-
+# 122. Create mysecret secret with username literal as myuser and password literal as mypassword
+kubectl delete secrets/mysecret
+kubectl create secrets generic mysecret --from-literal='username=myusername' --from-literal='password=mypassword' && \
+kubectl describe secrets/mysecret
 # Answer
-kubectl create secret generic my-secret —from-literal=username=user —from-literal=password=mypassword
+kubectl create secret generic my-secret --from-literal=username=myusername --from-literal=password=mypassword
 
-# 123. List the secrets in all namespaces
-
+# 123. Show secrets in all namespaces
+kubectl get secrets --all-namespaces
 # Answer
 kubectl get secret —all-namespaces
 
-# 124. Output the yaml of the secret created above
-
+# 124. Show yaml for mysecret secret
+kubetcl get secrets/mysecret --output=yaml
 # Answer
-kubectl get secret my-secret -o yaml
+kubectl get secret mysecret -o yaml
 
-# 125. Create an nginx pod which reads username as the environment variable
-cat << EOF >> busybox.yaml
+# 125. Create nginx pod with username literal in mysecret secret as environment variable
+kubectl delete po/nginx
+kubectl run nginx --generator=run-pod/v1 --image=nginx \
+--overrides='{"apiVersion":"v1","spec":{"containers":[{"image":"nginx","name":"nginx","env":[{"name":"USERNAME","valueFrom":{"secretKeyRef":{"name":"my-secret","key":"username"}}}]}]}}' && \
+kubectl wait --for=condition=Ready po/nginx && \
+kubectl describe po/nginx
+# Answer
+rm nginx.yaml
+cat << EOF >> nginx.yaml
 apiVersion: v1
 kind: Pod
 metadata:
-  name: busybox
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
 spec:
-  securityContect:
-    runAsUser: 1000
-    runAsGroup: 3000
-    fsGroup: 2000
   containers:
-    - name: busybox
-      image: busybox
-      command: [ “/bin/sh”, “-c”, “id; sleep 3600” ]
-      securityContext:
-        allowPrivilegeEscalation: false
+  - image: nginx
+    name: nginx
+    env:
+    - name: USERNAME
+      valueFrom:
+        secretKeyRef:
+          name: my-secret
+          key: username
+    resources: {}
+  dnsPolicy: ClusterFirst
   restartPolicy: Never
+status: {}
 EOF
-kubectl create —filename=busybox.yaml && \ 
-kubectl wait —for=condition=Ready po/busybox && \ 
-kubectl logs busybox
-# Answer
-// create a yml file
-kubectl run nginx —image=nginx —restart=Never —dry-run -o yaml > nginx.yml
-// add env section below and create
-kubectl create -f nginx.yml
-//verify
+kubectl create -f nginx.yaml
 kubectl exec -it nginx — env
 
-# 126. Create an nginx pod which loads the secret as environment variables
-cat << EOF >> busybox.yaml
+# 126. Create nginx pod with literals in mysecret secret as environment variable
+kubectl delete po/nginx
+kubectl run nginx --generator=run-pod/v1 --image=nginx \
+--overrides='{"apiVersion":"v1","spec":{"containers":[{"image":"nginx","name":"nginx","envFrom":[{"secretRef":{"name":"mysecret"}}]}]}}' && \
+kubectl wait --for=condition=Ready po/nginx && \
+kubectl describe po/nginx
+# Answer
+rm nginx.yaml
+cat << EOF >> nginx.yaml
 apiVersion: v1
 kind: Pod
 metadata:
-  name: busybox
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
 spec:
-  securityContect:
-    runAsUser: 1000
-    runAsGroup: 3000
-    fsGroup: 2000
   containers:
-    - name: busybox
-      image: busybox
-      command: [ “/bin/sh”, “-c”, “id; sleep 3600” ]
-      securityContext:
-        allowPrivilegeEscalation: false
+  - image: nginx
+    name: nginx
+    envFrom:
+    - secretRef:
+        name: my-secret
+    resources: {}
+  dnsPolicy: ClusterFirst
   restartPolicy: Never
+status: {}
 EOF
-kubectl create —filename=busybox.yaml && \ 
-kubectl wait —for=condition=Ready po/busybox && \ 
-kubectl logs busybox
-# Answer
-// create a yml file
-kubectl run nginx —image=nginx —restart=Never —dry-run -o yaml > nginx.yml
-// add env section below and create
-kubectl create -f nginx.yml
-//verify
-kubectl exec -it nginx — env
+kubectl create -f nginx.yaml
+kubectl exec -it nginx -- env
 
-# 127. List all the service accounts in the default namespace
-
+# 127. Show service accounts in default namespace
+kubectl get sa --namespace=default
 # Answer
 kubectl get sa
 
-# 128. List all the service accounts in all namespaces
-
+# 128. Show service accounts in all namespaces
+kubectl get sa --all-namespaces
 # Answer
 kubectl get sa —all-namespaces
 
-# 129. Create a service account called admin
+# 129. Create admin service account 
 
 # Answer
 kubectl create sa admin
 
-# 130. Output the YAML file for the service account we just created
+# 130. Show yaml for admin service account
 
 # Answer
 kubectl get sa admin -o yaml
 
-# 131. Create busybox pod that runs “sleep 3600” command /ith the service account admin and verify
-cat << EOF >> busybox.yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: busybox
-spec:
-  securityContect:
-    runAsUser: 1000
-    runAsGroup: 3000
-    fsGroup: 2000
-  containers:
-    - name: busybox
-      image: busybox
-      command: [ “/bin/sh”, “-c”, “id; sleep 3600” ]
-      securityContext:
-        allowPrivilegeEscalation: false
-  restartPolicy: Never
-EOF
+# 131. Create busybox pod that runs “sleep 3600” command with admin service account
+kubectl delete po/busybox
+kubectl run busybox --generator=run-pod/v1 --image=nginx \
+--overrides='//TODO' && \
+kubectl wait --for=condition=Ready po/busybox && \
+kubectl describe po/busybox
 # Answer
-kubectl run busybox —image=busybox —restart=Never —dry-run -o yaml — /bin/sh -c “sleep 3600” > busybox.yml
-kubectl create -f busybox.yml// verify
+rm busybox.yaml
+cat << EOF >> busybox.yaml
+//TODO
+EOF
+kubectl create -f busybox.yaml
 kubectl describe po busybox
 
 # Observability (18%)
