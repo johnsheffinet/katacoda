@@ -1,0 +1,86 @@
+version: '3.7'
+services:
+  csa-ip-service:
+    image: dtr.premierinc.com/advda_org/csa-ip-service:${IMG_VERSION}
+    deploy:
+      mode: replicated
+      replicas: 12
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 30s
+      resources:
+        limits:
+          memory: 8g 
+          cpus: "2"
+        reservations:
+          cpus: "1"
+          memory: 4m
+      update_config:
+        parallelism: 1 
+        delay: 10s 
+        failure_action: pause 
+        max_failure_ratio: 0 
+        monitor: 5s
+        order: "start-first"
+      placement:
+        constraints:
+          - "node.role != manager"
+      labels:
+        - 'com.docker.ucp.access.owner=jsheffie'
+        - 'com.docker.ucp.access.label=/Shared/advda'
+        - 'com.docker.swarm.reschedule-policies=["on-node-failure"]'
+        - 'traefik.enable=true'
+        - 'traefik.protocol=https'
+        - 'traefik.port=8443'
+        - 'traefik.docker.network=traefik-3'
+        - 'traefik.frontend.rule=Host:csastreamnp.premierinc.com'
+        - 'traefik.docker.network=traefikee_ingress'
+        - 'traefik.http.routers.advda.rule=Host(`csastreamnp.premierinc.com`)'
+        - 'traefik.http.routers.advda.tls=true'
+        - 'traefik.http.routers.advda.entrypoints=https'
+        - 'traefik.http.services.advda.loadbalancer.server.scheme=https'
+        - 'traefik.http.services.advda.loadbalancer.server.port=8443'
+    environment:
+      SPRING_CONFIG_LOCATION: "classpath:/,file:/run/secrets/"
+      SPRING_PROFILES_ACTIVE: "${CLUSTER_ENV}"
+      JAVA_OPTS: "-Xmx7g"
+    ports:
+      - 20900:8080
+      - 20901:8443
+    networks:
+      - advda-cockroachdb
+      - advda-storm
+      - public-hrm-new
+      - traefik-3
+      - obsrdm-lb_obsrdm
+    secrets:
+      - source: ingress-keystore
+        target: ingress-keystore
+      - source: csa-ip-np-passwords
+        target: application-np.properties
+    healthcheck:
+        interval: 1m30s 
+        retries: 5 
+        start_period: 0s
+        test: ["CMD-SHELL","curl -k https://localhost:8443/CsaService/rest/ping"]
+        timeout: 15s
+networks: 
+  obsrdm-lb_obsrdm: 
+    external: true
+  advda-cockroachdb: 
+    external: true
+  advda-storm: 
+    external: true
+  public-hrm-new: 
+    external: true
+  traefikee_ingress:
+    external: true
+secrets:
+  ingress-keystore:
+    external:
+      name: ingress-keystore-v4
+  csa-ip-np-passwords:
+    external:
+      name: csa-ip-np-passwords-v1 
