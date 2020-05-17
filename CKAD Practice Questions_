@@ -134,14 +134,14 @@ kubectl delete po nginx
 
 # 114. Create cfgvolume configmap with var1 literal as val1 and var2 literal as val2; Create nginx pod with nginx-volume persistent volume with environment variables from configvolume configmap on /etc/cfg path
 kubectl delete cm/cfgvolume
-kubectl create cm cfgvolume --from-literal="var1=val1" --from-literal="var2=val2" && \
+kubectl create cm cfgvolume --from-literal=var1=val1 --from-literal=var2=val2 && \
 kubectl get cm/cfgvolume
 
 kubectl delete po/nginx
-kubectl run po nginx --generator=run-pod/v1 --image=nginx \
---overrides='{"apiVersiom":"v1","spec":{"containers":[{"name":"nginx","image":"nginx","command":["bin/sh", "-c", "ls /etc/cfg"],"volumeMounts":[{"name":"nginx-volume","mountPath":"/etc/cfg"}]}]{"volumes":[{"name":"nginx-volume","configMap":{"name":"configvolume"}}]}}}' && \
+kubectl run nginx --generator=run-pod/v1 --image=nginx \
+--overrides='{"apiVersion":"v1","spec":{"volumes":[{"name":"nginx-volume","configMap":{"name":"cfgvolume"}}],"containers":[{"image":"nginx","name":"nginx","resources":{},"volumeMounts":[{"name":"nginx-volume","mountPath":"/etc/cfg"}]}]}}' && \
 kubectl wait --for=condition=Ready po/nginx && \
-kubectl logs nginx
+kubectl exec nginx -it -- /bin/sh -c "ls /etc/cfg"
 # Answer
 rm nginx.yaml
 cat << EOF >> nginx.yaml
