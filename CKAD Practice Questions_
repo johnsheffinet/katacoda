@@ -7,7 +7,7 @@ kubectl explain pod.spec.securityContext && \
 kubectl explain pod.spec.containers.securityContext && \
 
 # 105. List all configmaps in cluster
-kubectl get cm --all-namespaces
+kubectl get cm --all-namespace
 # Answer
 kubectl get cm
 
@@ -25,7 +25,7 @@ kubectl describe cm myconfigmap
 
 # 108. Delete myconfigmap configmap
 kubectl delete cm/myconfigmap && \
-kubectk get cm/myconfigmap
+kubectl get cm/myconfigmap
 # Answer
 kubectl delete cm myconfigmap
 
@@ -51,12 +51,12 @@ kubectl get cm/keyvalcfgmap
 kubectl create cm keyvalcfgmap --from-file=config.txt
 kubectl get cm keyvalcfgmap -o yaml
 
-# 111. Create nginx pod with environment variables from keyvalcfgmap configmap and runs “env” command
+# 111. Create nginx pod with environment variables from keyvalcfgmap configmap
 kubectl delete po/nginx
-kubectl run po nginx --generator=run-pod/v1 --image=nginx \
---overrides='{"apiVersiom":"v1","spec":{"containers":[{"name":"nginx","image":"nginx","command":["bin/sh", "-c", "env"],"envFrom":{"configMapRef":{"name":"keyvalcfgmap"}}}]}}' && \
+kubectl run nginx --generator=run-pod/v1 --image=nginx \
+--overrides='{"apiVersion":"v1","spec":{"containers":[{"image":"nginx","name":"nginx","resources":{},"envFrom":[{"configMapRef":{"name":"keyvalcfgmap"}}]}]}}' && \
 kubectl wait --for=condition=Ready po/nginx && \
-kubectl logs nginx
+kubectl exec nginx -it -- /bin/sh -c "env"
 # Answer
 rm nginx.yaml
 cat << EOF >> nginx.yaml
@@ -88,7 +88,6 @@ rm config.env
 cat << EOF >> config.env
 var1=val1
 EOF
-
 kubectl delete cm/envcfgmap
 kubectl create cm envcfgmap --from-env-file=config.env && \
 kubectl get cm/envcfgmap
@@ -98,11 +97,12 @@ cat config.env
 kubectl create cm envcfgmap --from-env-file=config.env
 kubectl get cm envcfgmap -o yaml --export
 
-# 113. Create nginx pod with environment variables from envcfgmap configmap and runs "env" command
+# 113. Create nginx pod with environment variables from envcfgmap configmap
 kubectl delete po/nginx
-kubectl run po nginx --generator=run-pod/v1 --image=nginx \
---overrides='{"apiVersion":"v1","spec":{"containers":[{"image":"nginx","name":"nginx","resources":{},"env":[{"name":"ENVIRONMENT","valueFrom":{"configMapKeyRef":{"name":"envcfgmap","key":"var1"}}}]}]}}' \
-kubectl logs nginx
+kubectl run nginx --generator=run-pod/v1 --image=nginx \
+--overrides='{"apiVersion":"v1","spec":{"containers":[{"image":"nginx","name":"nginx","resources":{},"env":[{"name":"ENVIRONMENT","valueFrom":{"configMapKeyRef":{"name":"envcfgmap","key":"var1"}}}]}]}}' && \
+kubectl wait --for=condition=Ready po/nginx && \
+kubectl exec nginx -it -- /bin/sh -c "env"
 # Answer
 rm nginx.yaml
 cat << EOF >> nginx.yaml
