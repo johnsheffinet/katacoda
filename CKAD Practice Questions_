@@ -1,4 +1,5 @@
 # Configuration (18%)
+
 kubectl explain configmap && \
 kubectl explain pod.spec.containers.envFrom && \
 kubectl explain pod.spec.containers.env && \
